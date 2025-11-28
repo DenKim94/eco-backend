@@ -34,5 +34,7 @@ out/
 /nbdist/
 /.nb-gradle/
 
-### VS Code ###
-.vscode/
+### Custom ###
+/src/main/java/eco/backend/main_app/*.http
+/src/main/resources/database/
+/database/*.db
