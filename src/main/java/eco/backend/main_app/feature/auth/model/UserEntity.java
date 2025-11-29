@@ -3,6 +3,7 @@ import jakarta.persistence.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+import java.time.LocalDateTime;
 
 import java.util.Collection;
 import java.util.List;
@@ -21,7 +22,7 @@ public class UserEntity implements UserDetails {
     // Speichert das BCRYPT-gehashte Passwort
     @Column(nullable = false)
     private String password;
-    @Column(nullable = false)
+    @Column(name = "created_at", nullable = false)
     private String createdAt;
 
     @Override
@@ -40,9 +41,6 @@ public class UserEntity implements UserDetails {
         return username;
     }
 
-    @Override
-    public boolean isAccountNonLocked() { return true; }
-
 
     public UserEntity() {}
 
@@ -52,6 +50,16 @@ public class UserEntity implements UserDetails {
         this.password = password;
     }
 
+    @PrePersist
+    protected void onCreate() {
+        // Setzt das Datum automatisch kurz vor dem SQL-INSERT
+        if (this.createdAt == null) {
+            // Speichert als ISO-String: z.B. "2025-11-29T15:45:00"
+            this.createdAt = LocalDateTime.now().toString();
+        }
+    }
+
+    public String getCreatedAt() { return createdAt; }
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public void setUsername(String username) { this.username = username; }
