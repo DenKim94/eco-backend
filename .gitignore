@@ -36,5 +36,4 @@ out/
 
 ### Custom ###
 /src/main/java/eco/backend/main_app/*.http
-/src/main/resources/database/
 /database/*.db
