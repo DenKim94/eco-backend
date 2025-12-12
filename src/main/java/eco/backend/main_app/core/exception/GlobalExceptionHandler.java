@@ -16,7 +16,6 @@ public class GlobalExceptionHandler {
         Map<String, Object> errorResponse = new HashMap<>();
 
         // Nimmt den Status direkt aus der Exception
-        errorResponse.put("timestamp", LocalDateTime.now().toString());
         errorResponse.put("status", ex.getStatus().value());
         errorResponse.put("message", ex.getMessage());
 
@@ -26,8 +25,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleGeneralError() {
         Map<String, String> errorResponse = new HashMap<>();
-        errorResponse.put("timestamp", LocalDateTime.now().toString());
-        errorResponse.put("status", "503");
+        errorResponse.put("status", "500");
         errorResponse.put("message", "Internal Server Error");
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
