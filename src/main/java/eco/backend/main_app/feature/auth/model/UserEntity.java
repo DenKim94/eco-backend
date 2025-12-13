@@ -24,10 +24,14 @@ public class UserEntity implements UserDetails {
     private String password;
     @Column(name = "created_at", nullable = false)
     private String createdAt;
+    // Default-Wert 'USER'
+    @Column(nullable = false)
+    private String role = "USER";
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE_USER"));
+        // Dynamisch je nach Feld 'role': "ROLE_USER" oder "ROLE_ADMIN"
+        return List.of(new SimpleGrantedAuthority("ROLE_" + this.role));
     }
 
     // Standard-Getter für Spring Security
@@ -41,13 +45,14 @@ public class UserEntity implements UserDetails {
         return username;
     }
 
-
+    // Der Default-Konstruktor für JPA [Muss parameterlos sein]
     public UserEntity() {}
 
     // Konstruktor zum Anlegen neuer User
     public UserEntity(String username, String password) {
         this.username = username;
         this.password = password;
+        this.role = "USER";
     }
 
     @PrePersist
@@ -64,4 +69,6 @@ public class UserEntity implements UserDetails {
     public void setId(Long id) { this.id = id; }
     public void setUsername(String username) { this.username = username; }
     public void setPassword(String password) { this.password = password; }
+    public String getRole() { return role; }
+    public void setRole(String role) { this.role = role; }
 }

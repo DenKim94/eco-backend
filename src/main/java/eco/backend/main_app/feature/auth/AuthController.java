@@ -1,5 +1,6 @@
 package eco.backend.main_app.feature.auth;
 
+import eco.backend.main_app.core.exception.GenericException;
 import eco.backend.main_app.core.security.JwtService;
 import eco.backend.main_app.feature.auth.dto.LoginRequest;
 import eco.backend.main_app.feature.auth.dto.RegisterRequest;
@@ -65,14 +66,17 @@ public class AuthController {
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
 
         // Authentifizierung durchführen
-        // AuthenticationManager prüft Username & Passwort gegen die DB.
-
+        // AuthenticationManager prüft Username & Passwort gegen die DB
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.username(),
-                        request.password()
-                )
+            new UsernamePasswordAuthenticationToken(
+                    request.username(),
+                    request.password()
+            )
         );
+
+        if (!authentication.isAuthenticated()){
+            throw new GenericException("Wrong username or password.", HttpStatus.UNAUTHORIZED);
+        }
 
         // UserDetails laden, um Token zu generieren
         UserEntity user = userService.getUserByUsername(request.username());

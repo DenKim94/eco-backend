@@ -1,9 +1,12 @@
 package eco.backend.main_app.core.exception;
 
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
+
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -22,12 +25,16 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(ex.getStatus()).body(errorResponse);
     }
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, String>> handleGeneralError() {
-        Map<String, String> errorResponse = new HashMap<>();
-        errorResponse.put("status", "500");
-        errorResponse.put("message", "Internal Server Error");
+    @ExceptionHandler({BadCredentialsException.class, AuthenticationException.class})
+    public ResponseEntity<Map<String, Object>> handleAuthError() {
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", HttpStatus.UNAUTHORIZED.value());
+        response.put("error", "Unauthorized");
 
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        // Wir geben eine neutrale Nachricht zurück (Security Best Practice: User Enumeration verhindern)
+        response.put("message", "Wrong username or password.");
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
     }
+
 }
