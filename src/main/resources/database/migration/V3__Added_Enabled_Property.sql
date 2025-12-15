@@ -1,0 +1,1 @@
+ALTER TABLE users ADD COLUMN is_enabled INTEGER NOT NULL DEFAULT 1; -- 1 = true (aktiv), 0 = false (gesperrt)

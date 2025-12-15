@@ -1,12 +1,16 @@
 package eco.backend.main_app.feature.auth;
 
 import eco.backend.main_app.core.exception.GenericException;
+import eco.backend.main_app.feature.auth.admin.dto.ListUserRequest;
 import eco.backend.main_app.feature.auth.model.UserEntity;
+import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 public class UserService implements UserDetailsService {
@@ -24,8 +28,44 @@ public class UserService implements UserDetailsService {
     }
 
     // Hilfsmethode für eigene Services
-    public UserEntity getUserByUsername(String username) {
+    public UserEntity findUserByName(String username) {
         return userRepository.findByUsername(username)
-                .orElseThrow(() -> new GenericException("User not found.", HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new GenericException("Username not found.", HttpStatus.NOT_FOUND));
+    }
+
+    public UserEntity findUserById(Long id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new GenericException("User not found by ID.", HttpStatus.NOT_FOUND));
+    }
+
+    @Transactional
+    public void deleteUserById(Long userId) {
+        if (!userRepository.existsById(userId)) {
+            throw new GenericException("User not found by ID.", HttpStatus.NOT_FOUND);
+        }
+        userRepository.deleteById(userId);
+    }
+
+    @Transactional
+    public void setUserEnabled(Long userId, boolean enabled) {
+        UserEntity user = findUserById(userId);
+
+        if ("ADMIN".equals(user.getRole()) && !enabled) {
+            throw new GenericException("Admin can't be disabled.", HttpStatus.FORBIDDEN);
+        }
+
+        user.setEnabled(enabled);
+        userRepository.save(user);
+    }
+
+    public List<ListUserRequest> getAllUsers() {
+        return userRepository.findAllByRoleNot("ADMIN").stream()
+                .map(user -> new ListUserRequest(
+                        user.getId(),
+                        user.getUsername(),
+                        user.isEnabled(),
+                        user.getCreatedAt()
+                ))
+                .toList();
     }
 }

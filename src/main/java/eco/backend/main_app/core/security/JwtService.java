@@ -22,6 +22,8 @@ public class JwtService {
     @Value("${jwt.expiration}")
     private long jwtExpirationMs;
 
+    //TODO: Tokens validieren  [15.12.2025]
+
     // Token generieren (für Login)
     public String getGeneratedToken(UserDetails userDetails) {
         return generateToken(new HashMap<>(), userDetails);

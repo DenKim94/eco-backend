@@ -1,6 +1,5 @@
 package eco.backend.main_app.feature.auth;
 
-import eco.backend.main_app.core.exception.GenericException;
 import eco.backend.main_app.core.security.JwtService;
 import eco.backend.main_app.feature.auth.dto.LoginRequest;
 import eco.backend.main_app.feature.auth.dto.RegisterRequest;
@@ -8,9 +7,6 @@ import eco.backend.main_app.feature.auth.model.UserEntity;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,22 +18,15 @@ import java.util.Map;
 @RequestMapping("/api/auth")
 public class AuthController {
     private final AuthService authService;
-    private final AuthenticationManager authenticationManager; // Spring Security Login-Manager
     private final JwtService jwtService;
-    private final UserService userService;
 
     @Value("${jwt.expiration}")
     private long jwtExpirationMs;
 
     // Dependency Injection via Constructor
-    public AuthController(AuthService authService,
-                          AuthenticationManager authenticationManager,
-                          JwtService jwtService,
-                          UserService userService) {
+    public AuthController(AuthService authService, JwtService jwtService) {
         this.authService = authService;
-        this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
-        this.userService = userService;
     }
 
     /**
@@ -64,22 +53,8 @@ public class AuthController {
      */
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
-
-        // Authentifizierung durchführen
-        // AuthenticationManager prüft Username & Passwort gegen die DB
-        Authentication authentication = authenticationManager.authenticate(
-            new UsernamePasswordAuthenticationToken(
-                    request.username(),
-                    request.password()
-            )
-        );
-
-        if (!authentication.isAuthenticated()){
-            throw new GenericException("Wrong username or password.", HttpStatus.UNAUTHORIZED);
-        }
-
-        // UserDetails laden, um Token zu generieren
-        UserEntity user = userService.getUserByUsername(request.username());
+        // Authentifizierung durchführen und User laden
+        UserEntity user = authService.authenticateUser(request);
 
         // JWT generieren
         String jwtToken = jwtService.getGeneratedToken(user);

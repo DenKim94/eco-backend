@@ -19,14 +19,20 @@ public class UserEntity implements UserDetails {
 
     @Column(unique = true, nullable = false)
     private String username;
+
     // Speichert das BCRYPT-gehashte Passwort
     @Column(nullable = false)
     private String password;
+
     @Column(name = "created_at", nullable = false)
     private String createdAt;
+
     // Default-Wert 'USER'
     @Column(nullable = false)
     private String role = "USER";
+
+    @Column(name = "is_enabled", nullable = false)
+    private boolean isEnabled = true; // Default: Aktiv
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -43,6 +49,11 @@ public class UserEntity implements UserDetails {
     @Override
     public String getUsername() {
         return username;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return this.isEnabled;
     }
 
     // Der Default-Konstruktor für JPA [Muss parameterlos sein]
@@ -63,7 +74,7 @@ public class UserEntity implements UserDetails {
             this.createdAt = LocalDateTime.now().toString();
         }
     }
-
+    public void setEnabled(boolean enabled) { this.isEnabled = enabled; }
     public String getCreatedAt() { return createdAt; }
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

@@ -31,10 +31,8 @@ public class GlobalExceptionHandler {
         response.put("status", HttpStatus.UNAUTHORIZED.value());
         response.put("error", "Unauthorized");
 
-        // Wir geben eine neutrale Nachricht zurück (Security Best Practice: User Enumeration verhindern)
         response.put("message", "Wrong username or password.");
 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
     }
-
 }
