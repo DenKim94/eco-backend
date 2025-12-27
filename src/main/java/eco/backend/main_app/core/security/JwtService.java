@@ -1,5 +1,6 @@
 package eco.backend.main_app.core.security;
 
+import eco.backend.main_app.feature.auth.model.UserEntity;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
@@ -22,11 +23,11 @@ public class JwtService {
     @Value("${jwt.expiration}")
     private long jwtExpirationMs;
 
-    //TODO: Tokens validieren  [15.12.2025]
-
     // Token generieren (für Login)
-    public String getGeneratedToken(UserDetails userDetails) {
-        return generateToken(new HashMap<>(), userDetails);
+    public String getGeneratedToken(UserEntity user) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("tokenVersion", user.getTokenVersion());
+        return generateToken(claims, user);
     }
 
     public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
@@ -44,9 +45,16 @@ public class JwtService {
     }
 
     // Token validieren: Passt Token zum User & ist er nicht abgelaufen?
-    public boolean isTokenValid(String token, UserDetails userDetails) {
+    public boolean isTokenValid(String token, UserEntity user) {
         final String username = extractUsername(token);
-        return (username.equals(userDetails.getUsername())) && !isTokenExpired(token);
+        final Integer versionInToken = extractTokenVersion(token);
+        return (username.equals(user.getUsername()))
+                && !isTokenExpired(token)
+                && (versionInToken != null && versionInToken.equals(user.getTokenVersion()));
+    }
+
+    private Integer extractTokenVersion(String token) {
+        return extractClaim(token, claims -> claims.get("tokenVersion", Integer.class));
     }
 
     private boolean isTokenExpired(String token) {
@@ -71,15 +79,8 @@ public class JwtService {
     }
 
     private SecretKey getSigningKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(getBase64Key());
+        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
         return Keys.hmacShaKeyFor(keyBytes);
-    }
-
-    // Hilfsmethode: Wandelt unseren String in Base64 um (falls er es nicht ist)
-    private String getBase64Key() {
-        // In Produktion: Key direkt als Base64 in Properties speichern!
-        // Hier simulieren wir es einfachheitshalber:
-        return java.util.Base64.getEncoder().encodeToString(secretKey.getBytes());
     }
 
 }

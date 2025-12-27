@@ -34,6 +34,9 @@ public class UserEntity implements UserDetails {
     @Column(name = "is_enabled", nullable = false)
     private boolean isEnabled = true; // Default: Aktiv
 
+    @Column(name = "token_version", nullable = false)
+    private Integer tokenVersion = 0;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         // Dynamisch je nach Feld 'role': "ROLE_USER" oder "ROLE_ADMIN"
@@ -73,6 +76,9 @@ public class UserEntity implements UserDetails {
             // Speichert als ISO-String: z.B. "2025-11-29T15:45:00"
             this.createdAt = LocalDateTime.now().toString();
         }
+        if (this.tokenVersion == null || this.tokenVersion < 0) {
+            this.tokenVersion = 0;
+        }
     }
     public void setEnabled(boolean enabled) { this.isEnabled = enabled; }
     public String getCreatedAt() { return createdAt; }
@@ -82,4 +88,7 @@ public class UserEntity implements UserDetails {
     public void setPassword(String password) { this.password = password; }
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
+    public Integer getTokenVersion() { return tokenVersion; }
+    public void updateTokenVersion() { this.tokenVersion += 1; }
+    public void resetTokenVersion(){ this.tokenVersion = 0; }
 }

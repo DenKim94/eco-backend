@@ -7,6 +7,7 @@ import eco.backend.main_app.feature.auth.model.UserEntity;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -64,5 +65,12 @@ public class AuthController {
                 "token", jwtToken,
                 "expiresIn", jwtExpirationMs
         ));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(Authentication authentication) { // User aus dem SecurityContext
+        String username = authentication.getName();
+        authService.logout(username);
+        return ResponseEntity.ok(Map.of("message", "User " + username + " logged out successfully"));
     }
 }

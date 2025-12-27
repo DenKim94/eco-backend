@@ -1,9 +1,9 @@
 package eco.backend.main_app.feature.auth;
 
 import eco.backend.main_app.core.exception.GenericException;
-import eco.backend.main_app.core.exception.GlobalExceptionHandler;
 import eco.backend.main_app.feature.auth.dto.LoginRequest;
 import jakarta.transaction.Transactional;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -20,6 +20,9 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
 
+    @Value("${app.security.token.max-version}")
+    private int maxTokenVersion;
+
     // Dependency Injection
     public AuthService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
@@ -31,15 +34,16 @@ public class AuthService {
 
     @Transactional
     public void register(String username, String rawPassword) {
-        try {
-            // 1. Prüfung: Gibt es den User schon?
-            if (userRepository.existsByUsername(username)) {
-                throw new GenericException(
-                        "Provided username '" + username + "' already exists.",
-                        HttpStatus.CONFLICT // Status 409
-                );
-            }
 
+        // 1. Prüfung: Gibt es den User schon?
+        if (userRepository.existsByUsername(username)) {
+            throw new GenericException(
+                    "Provided username '" + username + "' already exists.",
+                    HttpStatus.CONFLICT // Status 409
+            );
+        }
+
+        try {
             // 2. HASHING
             String encodedPassword = passwordEncoder.encode(rawPassword);
 
@@ -57,12 +61,37 @@ public class AuthService {
         }
     }
 
+    @Transactional
     public UserEntity authenticateUser(LoginRequest request) {
         // AuthenticationManager prüft Username & Passwort gegen die DB
         Authentication auth = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.username(), request.password())
         );
 
-        return (UserEntity) auth.getPrincipal();
+        UserEntity user = (UserEntity) auth.getPrincipal();
+
+        int nextVersion = user.getTokenVersion() + 1;
+
+        if (nextVersion > maxTokenVersion) {
+            // Version zurücksetzen: Alte Tokens werden ungültig!
+            user.resetTokenVersion();
+        } else {
+            // Version hochzählen: Alte Tokens werden ungültig!
+            user.updateTokenVersion();
+        }
+
+        userRepository.save(user);
+
+        return user;
+    }
+
+    @Transactional
+    public void logout(String username) {
+        UserEntity user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new GenericException("User not found", HttpStatus.NOT_FOUND));
+
+        // Version hochzählen: Token wird ungültig
+        user.updateTokenVersion();
+        userRepository.save(user);
     }
 }

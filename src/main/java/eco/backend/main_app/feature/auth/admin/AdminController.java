@@ -2,6 +2,7 @@ package eco.backend.main_app.feature.auth.admin;
 
 import eco.backend.main_app.feature.auth.UserService;
 import eco.backend.main_app.feature.auth.admin.dto.ListUserRequest;
+import eco.backend.main_app.feature.auth.model.UserEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -32,8 +33,9 @@ public class AdminController {
     @PatchMapping("/users/{id}/set-status")
     public ResponseEntity<?> setUserStatus(@PathVariable Long id, @RequestParam boolean isEnabled) {
         userService.setUserEnabled(id, isEnabled);
+        UserEntity user = userService.findUserById(id);
         String status = isEnabled ? "activated" : "blocked";
-        return ResponseEntity.ok(Map.of("message", "User has been " + status));
+        return ResponseEntity.ok(Map.of("message", "User " + user.getUsername() + " has been " + status));
     }
 
     @GetMapping("/get-users")
