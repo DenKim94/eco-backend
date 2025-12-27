@@ -1,0 +1,1 @@
+ALTER TABLE users ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0; -- Spalte hinzufügen (Standardwert 0, damit bestehende User gültig bleiben)
