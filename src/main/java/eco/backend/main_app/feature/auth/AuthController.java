@@ -1,5 +1,6 @@
 package eco.backend.main_app.feature.auth;
 
+import eco.backend.main_app.core.exception.GenericException;
 import eco.backend.main_app.core.security.JwtService;
 import eco.backend.main_app.feature.auth.dto.LoginRequest;
 import eco.backend.main_app.feature.auth.dto.RegisterRequest;
@@ -36,17 +37,24 @@ public class AuthController {
      */
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
+        try{
+            // 1. Service aufrufen
+            authService.register(request.username(), request.password(), request.email());
 
-        // 1. Service aufrufen
-        authService.register(request.username(), request.password());
+            // 2. Erfolgsmeldung zurückgeben
+            return ResponseEntity
+                    .status(HttpStatus.CREATED) // 201 Created
+                    .body(Map.of(
+                            "message", "User successfully registered.",
+                            "username", request.username()
+                    ));
+        } catch (Exception e) {
+            throw new GenericException(
+                    e.getMessage(),
+                    HttpStatus.BAD_REQUEST
+            );
+        }
 
-        // 2. Erfolgsmeldung zurückgeben
-        return ResponseEntity
-                .status(HttpStatus.CREATED) // 201 Created
-                .body(Map.of(
-                        "message", "User successfully registered.",
-                        "username", request.username()
-                ));
     }
 
     /**

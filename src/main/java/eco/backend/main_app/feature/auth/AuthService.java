@@ -33,7 +33,7 @@ public class AuthService {
     }
 
     @Transactional
-    public void register(String username, String rawPassword) {
+    public void register(String username, String rawPassword, String email) {
 
         // 1. Prüfung: Gibt es den User schon?
         if (userRepository.existsByUsername(username)) {
@@ -48,7 +48,7 @@ public class AuthService {
             String encodedPassword = passwordEncoder.encode(rawPassword);
 
             // 3. Entity erstellen
-            UserEntity newUser = new UserEntity(username, encodedPassword);
+            UserEntity newUser = new UserEntity(username, encodedPassword, email);
 
             // 4. Speichern
             userRepository.save(newUser);

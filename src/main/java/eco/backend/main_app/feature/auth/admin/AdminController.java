@@ -22,25 +22,30 @@ public class AdminController {
         this.userService = userService;
     }
 
-    // User löschen
+    // User entfernen
     @DeleteMapping("/users/{id}/remove")
     public ResponseEntity<?> deleteUser(@PathVariable Long id) {
+        UserEntity user = userService.findUserById(id);
         userService.deleteUserById(id);
-        return ResponseEntity.ok(Map.of("message", "User has been deleted."));
+        return ResponseEntity.ok(Map.of("message", "User " + user.getUsername() + " has been removed."));
     }
 
     // User sperren/entsperren
     @PatchMapping("/users/{id}/set-status")
     public ResponseEntity<?> setUserStatus(@PathVariable Long id, @RequestParam boolean isEnabled) {
-        userService.setUserEnabled(id, isEnabled);
         UserEntity user = userService.findUserById(id);
-        String status = isEnabled ? "activated" : "blocked";
-        return ResponseEntity.ok(Map.of("message", "User " + user.getUsername() + " has been " + status));
+        if(!user.getIsEnabled() && !isEnabled){
+            return ResponseEntity.ok(Map.of("message", "User " + user.getUsername() + " is already disabled."));
+        }
+        userService.setUserEnabled(id, isEnabled);
+        String status = isEnabled ? "activated" : "disabled";
+        return ResponseEntity.ok(Map.of("message", "User " + user.getUsername() + " has been " + status + "."));
     }
 
+    // Alle registrierten User anzeigen
     @GetMapping("/get-users")
     public ResponseEntity<List<ListUserRequest>> listAllUsers() {
-        List<ListUserRequest> users = userService.getAllUsers();
+        List<ListUserRequest> users = userService.getAllUserData();
         return ResponseEntity.ok(users);
     }
 }

@@ -24,6 +24,9 @@ public class UserEntity implements UserDetails {
     @Column(nullable = false)
     private String password;
 
+    @Column(unique = true, nullable = false)
+    private String email;
+
     @Column(name = "created_at", nullable = false)
     private String createdAt;
 
@@ -33,6 +36,9 @@ public class UserEntity implements UserDetails {
 
     @Column(name = "is_enabled", nullable = false)
     private boolean isEnabled = true; // Default: Aktiv
+
+    @Column(name = "is_validated_email", nullable = false)
+    private boolean isValidatedEmail = false; // Validierte E-Mail-Adresse
 
     @Column(name = "token_version", nullable = false)
     private Integer tokenVersion = 0;
@@ -63,9 +69,10 @@ public class UserEntity implements UserDetails {
     public UserEntity() {}
 
     // Konstruktor zum Anlegen neuer User
-    public UserEntity(String username, String password) {
+    public UserEntity(String username, String password, String email) {
         this.username = username;
         this.password = password;
+        this.email = email;
         this.role = "USER";
     }
 
@@ -81,14 +88,16 @@ public class UserEntity implements UserDetails {
         }
     }
     public void setEnabled(boolean enabled) { this.isEnabled = enabled; }
-    public String getCreatedAt() { return createdAt; }
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public boolean getIsEnabled() { return this.isEnabled; }
+    public String getCreatedAt() { return this.createdAt; }
+    public Long getId() { return this.id; }
     public void setUsername(String username) { this.username = username; }
     public void setPassword(String password) { this.password = password; }
     public String getRole() { return role; }
-    public void setRole(String role) { this.role = role; }
     public Integer getTokenVersion() { return tokenVersion; }
     public void updateTokenVersion() { this.tokenVersion += 1; }
     public void resetTokenVersion(){ this.tokenVersion = 0; }
+    public String getEmail() { return this.email; }
+    public boolean getIsValidatedEmail(){ return this.isValidatedEmail; }
+    public void setIsValidatedEmail(boolean isValidEmail) { this.isValidatedEmail = true; }
 }

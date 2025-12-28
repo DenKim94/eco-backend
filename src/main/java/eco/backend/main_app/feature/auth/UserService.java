@@ -58,12 +58,14 @@ public class UserService implements UserDetailsService {
         userRepository.save(user);
     }
 
-    public List<ListUserRequest> getAllUsers() {
+    public List<ListUserRequest> getAllUserData() {
         return userRepository.findAllByRoleNot("ADMIN").stream()
                 .map(user -> new ListUserRequest(
                         user.getId(),
                         user.getUsername(),
+                        user.getEmail(),
                         user.isEnabled(),
+                        user.getIsValidatedEmail(),
                         user.getCreatedAt()
                 ))
                 .toList();
