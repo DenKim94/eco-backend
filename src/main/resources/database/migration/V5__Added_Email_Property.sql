@@ -1,0 +1,1 @@
+ALTER TABLE users ADD COLUMN is_validated_email INTEGER NOT NULL DEFAULT 0; -- 1 = true (validiert), 0 = false (nicht validiert)
