@@ -75,10 +75,18 @@ public class AuthController {
         ));
     }
 
+    /**
+     * POST /api/auth/logout
+     */
     @PostMapping("/logout")
     public ResponseEntity<?> logout(Authentication authentication) { // User aus dem SecurityContext
         String username = authentication.getName();
         authService.logout(username);
         return ResponseEntity.ok(Map.of("message", "User " + username + " logged out successfully"));
     }
+
+    // TODO [28.12.2025]: E-Mail des Users validieren
+    //  --> E-Mail-Service implementieren/nutzen --> PIN zur Bestätigung der E-Mail durch den User
+
+    // TODO [28.12.2025]: Zurücksetzen des Passworts über eine PIN, die über die hinterlegte e-Mail an den User gesendet wird
 }
