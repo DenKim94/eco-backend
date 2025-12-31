@@ -1,5 +1,6 @@
-package eco.backend.main_app.feature.configurations.model;
+package eco.backend.main_app.feature.configuration.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import eco.backend.main_app.feature.auth.model.UserEntity;
 import jakarta.persistence.*;
 
@@ -31,11 +32,12 @@ public class ConfigEntity {
     private Double additionalCredit = 0.0;          // Guthaben in EUR
 
     @Column(name = "meter_identifier", nullable = false)
-    private String meterIdentifier = "EMPTY-IDENTIFIER"; // Zählernummer
+    private String meterIdentifier = "EMPTY-METER-ID"; // Zählernummer
 
-    // Verknüpfung zum User
+    // Verknüpfung zum User (LAZY: Userdaten werden erst dann geladen, wenn diese benötigt werden)
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false, unique = true)
+    @JsonIgnore
     private UserEntity user;
 
     public ConfigEntity() {}

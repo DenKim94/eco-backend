@@ -1,4 +1,4 @@
-package eco.backend.main_app.feature.configurations.dto;
+package eco.backend.main_app.feature.configuration.dto;
 
 public record ConfigDto(
         Double basePrice,

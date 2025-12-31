@@ -13,12 +13,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import eco.backend.main_app.feature.auth.model.UserEntity;
 import eco.backend.main_app.feature.auth.UserRepository;
+import eco.backend.main_app.core.event.UserRegisteredEvent;
+import org.springframework.context.ApplicationEventPublisher;
 
 @Service
 public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
+    private final ApplicationEventPublisher eventPublisher; // Neu
 
     @Value("${app.security.token.max-version}")
     private int maxTokenVersion;
@@ -26,10 +29,12 @@ public class AuthService {
     // Dependency Injection
     public AuthService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
-                       AuthenticationManager authenticationManager) {
+                       AuthenticationManager authenticationManager,
+                       ApplicationEventPublisher eventPublisher) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -48,10 +53,13 @@ public class AuthService {
             String encodedPassword = passwordEncoder.encode(rawPassword);
 
             // 3. Entity erstellen
-            UserEntity newUser = new UserEntity(username, encodedPassword, email);
+            UserEntity registeredUser = new UserEntity(username, encodedPassword, email);
 
             // 4. Speichern
-            userRepository.save(newUser);
+            userRepository.save(registeredUser);
+
+            // 5. Event auslösen
+            eventPublisher.publishEvent(new UserRegisteredEvent(this, registeredUser));
         }
         catch( Exception e ){
             throw new GenericException(

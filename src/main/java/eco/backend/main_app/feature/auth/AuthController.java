@@ -36,7 +36,7 @@ public class AuthController {
      * Body: { "username": "Max", "password": "123" }
      */
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
+    public ResponseEntity<Map<String, String>> register(@RequestBody RegisterRequest request) {
         try{
             // 1. Service aufrufen
             authService.register(request.username(), request.password(), request.email());
@@ -61,7 +61,7 @@ public class AuthController {
      * POST /api/auth/login
      */
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<Map<String, Object>> login(@RequestBody LoginRequest request) {
         // Authentifizierung durchführen und User laden
         UserEntity user = authService.authenticateUser(request);
 
@@ -79,7 +79,7 @@ public class AuthController {
      * POST /api/auth/logout
      */
     @PostMapping("/logout")
-    public ResponseEntity<?> logout(Authentication authentication) { // User aus dem SecurityContext
+    public ResponseEntity<Map<String, String>> logout(Authentication authentication) { // User aus dem SecurityContext
         String username = authentication.getName();
         authService.logout(username);
         return ResponseEntity.ok(Map.of("message", "User " + username + " logged out successfully"));

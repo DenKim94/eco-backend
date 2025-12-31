@@ -40,8 +40,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // WICHTIG: Registrierung muss für JEDEN offen sein (permitAll)
                         .requestMatchers("/api/auth/**").permitAll()
-                        // .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         // Alles andere braucht eine Authentifizierung
+                        .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated()
                 )
         // WICHTIG: Session auf Stateless setzen

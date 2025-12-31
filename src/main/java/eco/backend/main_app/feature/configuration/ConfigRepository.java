@@ -1,6 +1,6 @@
-package eco.backend.main_app.feature.configurations;
+package eco.backend.main_app.feature.configuration;
 
-import eco.backend.main_app.feature.configurations.model.ConfigEntity;
+import eco.backend.main_app.feature.configuration.model.ConfigEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

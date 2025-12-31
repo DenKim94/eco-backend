@@ -1,10 +1,14 @@
-package eco.backend.main_app.feature.configurations;
+package eco.backend.main_app.feature.configuration;
 
+import eco.backend.main_app.core.exception.GenericException;
 import eco.backend.main_app.feature.auth.UserService;
 import eco.backend.main_app.feature.auth.model.UserEntity;
-import eco.backend.main_app.feature.configurations.dto.ConfigDto;
-import eco.backend.main_app.feature.configurations.model.ConfigEntity;
+import eco.backend.main_app.feature.configuration.dto.ConfigDto;
+import eco.backend.main_app.feature.configuration.model.ConfigEntity;
+import eco.backend.main_app.core.event.UserRegisteredEvent;
+import org.springframework.context.event.EventListener;
 import jakarta.transaction.Transactional;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -19,32 +23,42 @@ public class ConfigService {
 
     /**
      * READ: Lädt die Konfiguration des eingeloggten Users.
-     * Falls noch keine in der DB existiert, wird eine temporäre
-     * Default-Konfiguration zurückgegeben.
+     * Falls noch keine in der DB existiert, wird eine Fehlermeldung zurückgegeben.
      */
     public ConfigEntity getConfig(String username) {
         UserEntity user = userService.findUserByName(username);
 
-        // Versuche zu laden, sonst erzeuge Default-Objekt (ohne zu speichern)
         return configRepository.findByUserId(user.getId())
-                .orElseGet(() -> createDefaultConfig(user));
+                .orElseThrow(() ->  new GenericException(
+                        "Data inconsistency: No configuration of specific user found.",
+                        HttpStatus.INTERNAL_SERVER_ERROR)
+        );
     }
 
-    // Hilfsmethode: Erzeugt ein Config-Objekt mit Standardwerten (definiert in der Entity-Klasse)
+    /** Hilfsmethode: Erzeugt ein Config-Objekt mit Standardwerten (definiert in der Entity-Klasse) */
     private ConfigEntity createDefaultConfig(UserEntity user) {
         ConfigEntity defaults = new ConfigEntity();
         defaults.setUser(user);
         return defaults;
     }
 
+    @EventListener
+    public void handleUserRegistration(UserRegisteredEvent event) {
+        UserEntity user = event.getUser();
+
+        // Default Config erstellen und speichern
+        ConfigEntity defaultConfig = createDefaultConfig(user);
+        configRepository.save(defaultConfig);
+
+        System.out.println("Default-Config for User " + user.getUsername() + " has been created.");
+    }
+
     /**
-     * WRITE: Erstellt einen neuen Eintrag oder aktualisiert den bestehenden (Upsert).
+     * WRITE: Aktualisiert die Konfiguration des Users.
      */
     @Transactional
-    public ConfigEntity saveOrUpdateConfig(String username, ConfigDto dto) {
-        UserEntity user = userService.findUserByName(username);
+    public ConfigEntity updateConfig(String username, ConfigDto dto) {
 
-        // Bestehende Config suchen ODER neue leere Entity (mit Java-Defaults) anlegen
         ConfigEntity config = getConfig(username);
 
         // Werte aus DTO übertragen (nur wenn nicht null, um versehentliches Löschen zu vermeiden)
@@ -56,7 +70,7 @@ public class ConfigService {
         if (dto.additionalCredit() != null) config.setAdditionalCredit(dto.additionalCredit());
         if (dto.meterIdentifier() != null) config.setMeterIdentifier(dto.meterIdentifier());
 
-        // Speichern (Insert oder Update passiert automatisch durch JPA)
+        // Speichern der Änderungen
         return configRepository.save(config);
     }
 }

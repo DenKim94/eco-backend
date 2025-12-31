@@ -1,6 +1,6 @@
 package eco.backend.main_app.core.security;
 
-import eco.backend.main_app.feature.auth.UserService; // Deine Service-Klasse
+import eco.backend.main_app.feature.auth.UserService;
 import eco.backend.main_app.feature.auth.model.UserEntity;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -58,7 +58,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 if (userDetails instanceof UserEntity userEntity) {
 
-                    // 3. Validierung mit dem ECHTEN Datenbank-Objekt
+                    // Validierung mit dem ECHTEN Datenbank-Objekt
                     if (jwtService.isTokenValid(jwt, userEntity)) {
 
                         UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
