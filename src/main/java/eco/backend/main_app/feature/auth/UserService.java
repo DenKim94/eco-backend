@@ -40,6 +40,11 @@ public class UserService implements UserDetailsService {
 
     @Transactional
     public void deleteUserById(Long userId) {
+
+        if (isAdmin(userId)) {
+            throw new GenericException("Admin can't be removed.", HttpStatus.FORBIDDEN);
+        }
+
         if (!userRepository.existsById(userId)) {
             throw new GenericException("User not found by ID.", HttpStatus.NOT_FOUND);
         }
@@ -50,12 +55,17 @@ public class UserService implements UserDetailsService {
     public void setUserEnabled(Long userId, boolean enabled) {
         UserEntity user = findUserById(userId);
 
-        if ("ADMIN".equals(user.getRole()) && !enabled) {
+        if (isAdmin(userId) && !enabled) {
             throw new GenericException("Admin can't be disabled.", HttpStatus.FORBIDDEN);
         }
 
         user.setEnabled(enabled);
         userRepository.save(user);
+    }
+
+    private boolean isAdmin(Long userId) {
+        UserEntity user = findUserById(userId);
+        return "ADMIN".equals(user.getRole());
     }
 
     public List<ListUserRequest> getAllUserData() {
