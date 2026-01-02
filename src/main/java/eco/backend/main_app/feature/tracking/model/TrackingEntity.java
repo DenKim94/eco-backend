@@ -3,6 +3,7 @@ package eco.backend.main_app.feature.tracking.model;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import eco.backend.main_app.feature.auth.model.UserEntity;
+import eco.backend.main_app.utils.AppConstants;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -18,7 +19,7 @@ public class TrackingEntity {
     private Double readingValue; // Umbenannt für Java-Konvention, mappt auf kwh_reading
 
     @Column(nullable = false)
-    @JsonFormat(pattern = "dd.MM.yyyy HH:mm:ss")
+    @JsonFormat(pattern = AppConstants.JSON_DATE_PATTERN)
     private LocalDateTime timestamp;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -32,6 +33,8 @@ public class TrackingEntity {
     public void setUser(UserEntity user) { this.user = user; }
     public UserEntity getUser() { return user; }
     public void setReadingValue(Double value_kWh){ this.readingValue = value_kWh; }
+    public Double getReadingValue(){ return this.readingValue; }
     public LocalDateTime getTimestamp(){ return this.timestamp; }
     public void setTimestamp(LocalDateTime date_value){ this.timestamp = date_value; }
+    public Long getId(){ return this.id; }
 }
