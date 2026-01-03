@@ -163,7 +163,6 @@ public class TrackingService {
     public boolean isValidUpdatedValue(TrackingEntity entityToUpdate, Double newValue, LocalDateTime newTimestamp) {
 
         boolean predecessorCheck = false;
-        boolean successorCheck = false;
 
         // CHECK: Nicht null, nicht negativ
         if (newValue == null || newValue < 0) {
@@ -195,11 +194,9 @@ public class TrackingService {
         }
 
         // --- PRÜFUNG GEGEN NACHFOLGER ---
-        if (successor != null) {
-            successorCheck = newValue <= successor.getReadingValue() && !newTimestamp.isAfter(successor.getTimestamp());
-            if (predecessor == null) {
-                return successorCheck;
-            }
+        boolean successorCheck = newValue <= successor.getReadingValue() && !newTimestamp.isAfter(successor.getTimestamp());
+        if (predecessor == null) {
+            return successorCheck;
         }
 
         return predecessorCheck && successorCheck;
