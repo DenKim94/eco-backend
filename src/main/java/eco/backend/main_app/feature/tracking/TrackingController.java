@@ -2,11 +2,13 @@ package eco.backend.main_app.feature.tracking;
 
 import eco.backend.main_app.feature.tracking.dto.TrackingDto;
 import eco.backend.main_app.feature.tracking.model.TrackingEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/tracking")
@@ -24,8 +26,16 @@ public class TrackingController {
     }
 
     @GetMapping("/get-newest")
-    public ResponseEntity<TrackingEntity> getNewest(@AuthenticationPrincipal UserDetails user) {
-        return ResponseEntity.ok(service.getNewestEntry(user.getUsername()));
+    public ResponseEntity<?> getNewest(@AuthenticationPrincipal UserDetails user) {
+        TrackingEntity result = service.getNewestEntry(user.getUsername());
+
+        if (result == null) {
+            return ResponseEntity
+                    .status(HttpStatus.NOT_FOUND)
+                    .body("Entry not found.");
+        }
+
+        return ResponseEntity.ok(result);
     }
 
     @PostMapping("/add")
@@ -34,9 +44,9 @@ public class TrackingController {
     }
 
     @DeleteMapping("/{id}/delete")
-    public ResponseEntity<Void> delete(@AuthenticationPrincipal UserDetails user, @PathVariable("id") Long id) {
+    public ResponseEntity<Map<String, String>> delete(@AuthenticationPrincipal UserDetails user, @PathVariable("id") Long id) {
         service.deleteEntryById(user.getUsername(), id);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(Map.of("message", "Entry has been removed successfully."));
     }
 
     @PutMapping("/{id}/update")

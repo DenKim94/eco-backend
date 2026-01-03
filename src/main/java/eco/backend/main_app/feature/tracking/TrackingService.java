@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 
 @Service
@@ -34,23 +35,23 @@ public class TrackingService {
     /** Eintrag hinzufügen */
     @Transactional
     public TrackingEntity addEntry(String username, TrackingDto dto) {
-        try {
-            UserEntity user = userService.findUserByName(username);
 
-            TrackingEntity entity = new TrackingEntity();
-            entity.setUser(user);
-            entity.setReadingValue(dto.value_kWh());
+        UserEntity user = userService.findUserByName(username);
 
-            LocalDateTime timestamp = getParsedDate(dto.date());
-            entity.setTimestamp(timestamp);
+        TrackingEntity entity = new TrackingEntity();
+        entity.setUser(user);
+        entity.setReadingValue(dto.value_kWh());
 
-            return repository.save(entity);
+        LocalDateTime timestamp = getParsedDate(dto.date());
+        entity.setTimestamp(timestamp);
 
-        } catch (Exception e) {
-            throw new GenericException(e.getMessage(), HttpStatus.BAD_REQUEST);
+        if (!isValidTrackingValue(username, dto)) {
+            throw new GenericException("Invalid entry properties.", HttpStatus.BAD_REQUEST);
         }
+        return repository.save(entity);
     }
 
+    /** Hilfsmethode: Datum aus String zu LocalDateTime parsen */
     private LocalDateTime getParsedDate(String date) {
         LocalDateTime timestamp;
 
@@ -58,7 +59,7 @@ public class TrackingService {
         if (date != null && !date.isBlank()) {
             // Falls String vorhanden: Parsen + Tagesanfang
             LocalDate localDate = LocalDate.parse(date, AppConstants.JSON_DATE_FORMATTER);
-            timestamp = localDate.atStartOfDay();
+            timestamp = localDate.atTime(LocalTime.now());
 
         } else {
             // Falls leer/null
@@ -72,7 +73,7 @@ public class TrackingService {
         UserEntity user = userService.findUserByName(username);
 
         return repository.findFirstByUserIdOrderByTimestampDesc(user.getId())
-                .orElseThrow(() -> new GenericException("Could not find any entry.", HttpStatus.BAD_REQUEST));
+                .orElse(null);
     }
 
     /** Bestimmten Eintrag anhand der ID entfernen */
@@ -98,7 +99,7 @@ public class TrackingService {
     /** Bestimmten Eintrag anhand der ID aktualisieren */
     @Transactional
     public TrackingEntity updateEntryById(String username, Long id, TrackingDto updateDto) {
-        try {
+
         // Den User laden, der die Anfrage stellt
         UserEntity currentUser = userService.findUserByName(username);
 
@@ -111,15 +112,96 @@ public class TrackingService {
             throw new GenericException("You are not allowed to update this entry.", HttpStatus.FORBIDDEN);
         }
 
+        LocalDateTime updatedDate = updateDto.date().isBlank() ? existingEntry.getTimestamp() : getParsedDate(updateDto.date()) ;
+
         // Wert und Datum aktualisieren (Mapping)
         existingEntry.setReadingValue(updateDto.value_kWh());
-        existingEntry.setTimestamp(!updateDto.date().isBlank() ? getParsedDate(updateDto.date()) : existingEntry.getTimestamp());
+        existingEntry.setTimestamp(updatedDate);
+
+        // CHECK: Validierung
+        if (!isValidUpdatedValue(existingEntry, updateDto.value_kWh(), updatedDate)){
+            throw new GenericException("Update failed: Invalid entry properties.", HttpStatus.BAD_REQUEST);
+        }
 
         // Speichern
         return repository.save(existingEntry);
+    }
 
-        } catch (Exception e) {
-            throw new GenericException(e.getMessage(), HttpStatus.BAD_REQUEST);
+    /** Hilfsmethode: Validierung des getrackten Eintrags */
+    public boolean isValidTrackingValue(String username, TrackingDto dto) {
+
+        // CHECK: Wert darf nicht null oder negativ sein
+        if (dto.value_kWh() == null || dto.value_kWh() < 0) {
+            return false;
         }
+
+        TrackingEntity lastEntry = getNewestEntry(username);
+        LocalDateTime currentTimestamp = getParsedDate(dto.date());
+
+        // CHECK: Wenn es keinen letzten Eintrag gibt, ist der Wert gültig
+        if (lastEntry == null || lastEntry.getReadingValue() == null) {
+            return true;
+        }
+
+        // CHECK: Aktueller Eintrag darf nicht ÄLTER sein als der letzte Eintrag
+        if (currentTimestamp.isBefore(lastEntry.getTimestamp())) {
+            return false;
+        }
+
+        // CHECK: Wert muss größer sein als der vorherige
+        return (dto.value_kWh() >= lastEntry.getReadingValue());
+    }
+
+    /**
+     * Validiert ein Update: Prüft gegen Vorgänger und Nachfolger (Sandwich-Check).
+     *
+     * @param entityToUpdate Der Eintrag, der gerade bearbeitet wird (mit seiner ID und dem ALTEN Timestamp).
+     * @param newValue Der neue Zählerstand (vom DTO).
+     * @param newTimestamp Das neue Datum (vom DTO oder das alte, falls nicht geändert).
+     * @return true, wenn das Update gültig ist.
+     */
+    public boolean isValidUpdatedValue(TrackingEntity entityToUpdate, Double newValue, LocalDateTime newTimestamp) {
+
+        boolean predecessorCheck = false;
+        boolean successorCheck = false;
+
+        // CHECK: Nicht null, nicht negativ
+        if (newValue == null || newValue < 0) {
+            return false;
+        }
+
+        Long userId = entityToUpdate.getUser().getId();
+        Long currentId = entityToUpdate.getId();
+
+        // Vorgänger finden (Der neueste Eintrag, der zeitlich VOR oder GLEICH dem neuen Datum ist, aber NICHT dieser Eintrag selbst)
+        TrackingEntity predecessor = repository.findFirstByUserIdAndTimestampLessThanEqualAndIdNotOrderByTimestampDesc(
+                userId, newTimestamp, currentId).orElse(null);
+
+        // Nachfolger finden (Der älteste Eintrag, der zeitlich NACH oder GLEICH dem neuen Datum ist, aber NICHT dieser Eintrag selbst)
+        TrackingEntity successor = repository.findFirstByUserIdAndTimestampGreaterThanEqualAndIdNotOrderByTimestampAsc(
+                userId, newTimestamp, currentId).orElse(null);
+
+        // Falls nur ein Eintrag in der Datenbank vorhanden ist, ist der Wert gültig
+        if (predecessor == null && successor == null) {
+            return true;
+        }
+
+        // --- PRÜFUNG GEGEN VORGÄNGER ---
+        if (predecessor != null) {
+            predecessorCheck = newValue >= predecessor.getReadingValue() && !newTimestamp.isBefore(predecessor.getTimestamp());
+            if (successor == null) {
+                return predecessorCheck;
+            }
+        }
+
+        // --- PRÜFUNG GEGEN NACHFOLGER ---
+        if (successor != null) {
+            successorCheck = newValue <= successor.getReadingValue() && !newTimestamp.isAfter(successor.getTimestamp());
+            if (predecessor == null) {
+                return successorCheck;
+            }
+        }
+
+        return predecessorCheck && successorCheck;
     }
 }
