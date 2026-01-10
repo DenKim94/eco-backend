@@ -7,8 +7,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
-
 @RestController
 @RequestMapping("/api/config")
 public class ConfigController {
@@ -25,7 +23,7 @@ public class ConfigController {
     @GetMapping
     public ResponseEntity<ConfigEntity> getConfig(@AuthenticationPrincipal UserDetails userDetails) {
         // Wir delegieren einfach an den Service
-        ConfigEntity config = configService.getConfig(userDetails.getUsername());
+        ConfigEntity config = configService.getConfigByUsername(userDetails.getUsername());
         return ResponseEntity.ok(config);
     }
 

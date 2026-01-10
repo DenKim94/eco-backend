@@ -21,4 +21,10 @@ public interface TrackingRepository extends JpaRepository<TrackingEntity, Long> 
     // Finde den direkten Nachfolger (Zeit >= neu, aber andere ID)
     Optional<TrackingEntity> findFirstByUserIdAndTimestampGreaterThanEqualAndIdNotOrderByTimestampAsc(
             Long userId, LocalDateTime timestamp, Long id);
+
+    // Eintrag über Datum (Timestamp) finden
+    Optional<TrackingEntity> findByUserIdAndTimestamp(Long userId, LocalDateTime timestamp);
+
+    // Den ältesten Eintrag finden
+    Optional<TrackingEntity> findFirstByUserIdOrderByTimestampAsc(Long userId);
 }

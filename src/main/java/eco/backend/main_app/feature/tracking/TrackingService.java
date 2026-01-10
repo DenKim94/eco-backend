@@ -5,14 +5,12 @@ import eco.backend.main_app.feature.auth.UserService;
 import eco.backend.main_app.feature.auth.model.UserEntity;
 import eco.backend.main_app.feature.tracking.dto.TrackingDto;
 import eco.backend.main_app.feature.tracking.model.TrackingEntity;
-import eco.backend.main_app.utils.AppConstants;
+import eco.backend.main_app.utils.ReuseHelper;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.List;
 
 @Service
@@ -42,30 +40,13 @@ public class TrackingService {
         entity.setUser(user);
         entity.setReadingValue(dto.value_kWh());
 
-        LocalDateTime timestamp = getParsedDate(dto.date());
+        LocalDateTime timestamp = ReuseHelper.getParsedDateTime(dto.date());
         entity.setTimestamp(timestamp);
 
         if (!isValidTrackingValue(username, dto)) {
             throw new GenericException("Invalid entry properties.", HttpStatus.BAD_REQUEST);
         }
         return repository.save(entity);
-    }
-
-    /** Hilfsmethode: Datum aus String zu LocalDateTime parsen */
-    private LocalDateTime getParsedDate(String date) {
-        LocalDateTime timestamp;
-
-        // Falls kein Datum übergeben wird, wird aktuelles Datum verwendet
-        if (date != null && !date.isBlank()) {
-            // Falls String vorhanden: Parsen + Tagesanfang
-            LocalDate localDate = LocalDate.parse(date, AppConstants.JSON_DATE_FORMATTER);
-            timestamp = localDate.atTime(LocalTime.now());
-
-        } else {
-            // Falls leer/null
-            timestamp = LocalDateTime.now();
-        }
-        return timestamp;
     }
 
     /** Letzten neusten Eintrag ausgeben */
@@ -112,7 +93,7 @@ public class TrackingService {
             throw new GenericException("You are not allowed to update this entry.", HttpStatus.FORBIDDEN);
         }
 
-        LocalDateTime updatedDate = updateDto.date().isBlank() ? existingEntry.getTimestamp() : getParsedDate(updateDto.date()) ;
+        LocalDateTime updatedDate = updateDto.date().isBlank() ? existingEntry.getTimestamp() : ReuseHelper.getParsedDateTime(updateDto.date()) ;
 
         // Wert und Datum aktualisieren (Mapping)
         existingEntry.setReadingValue(updateDto.value_kWh());
@@ -136,7 +117,7 @@ public class TrackingService {
         }
 
         TrackingEntity lastEntry = getNewestEntry(username);
-        LocalDateTime currentTimestamp = getParsedDate(dto.date());
+        LocalDateTime currentTimestamp = ReuseHelper.getParsedDateTime(dto.date());
 
         // CHECK: Wenn es keinen letzten Eintrag gibt, ist der Wert gültig
         if (lastEntry == null || lastEntry.getReadingValue() == null) {

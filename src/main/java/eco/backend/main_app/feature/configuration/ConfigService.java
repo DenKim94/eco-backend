@@ -25,7 +25,7 @@ public class ConfigService {
      * READ: Lädt die Konfiguration des eingeloggten Users.
      * Falls noch keine in der DB existiert, wird eine Fehlermeldung zurückgegeben.
      */
-    public ConfigEntity getConfig(String username) {
+    public ConfigEntity getConfigByUsername(String username) {
         UserEntity user = userService.findUserByName(username);
 
         return configRepository.findByUserId(user.getId())
@@ -59,7 +59,7 @@ public class ConfigService {
     @Transactional
     public ConfigEntity updateConfig(String username, ConfigDto dto) {
 
-        ConfigEntity config = getConfig(username);
+        ConfigEntity config = getConfigByUsername(username);
 
         // Werte aus DTO übertragen (nur wenn nicht null, um versehentliches Löschen zu vermeiden)
         if (dto.basePrice() != null) config.setBasePrice(dto.basePrice());
