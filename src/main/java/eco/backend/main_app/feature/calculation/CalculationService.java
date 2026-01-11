@@ -15,19 +15,18 @@ import eco.backend.main_app.utils.ReuseHelper;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.Optional;
+
 
 @Service
 public class CalculationService {
     private final TrackingRepository trackingRepository;
     private final UserService userService;
     private final ConfigService configService;
-    private final CalculationRepository calculationRepository; // NEU
+    private final CalculationRepository calculationRepository;
 
     public CalculationService(TrackingRepository trackingRepository,
                               UserService userService,
@@ -41,11 +40,26 @@ public class CalculationService {
     }
 
     /**
-     * Berechnet die Kosten anhand der getrackten Daten.
+     * Berechnet die Kosten anhand der getrackten Daten für einen bestimmten Zeitraum.
+     * Wird kein Start- oder Enddatum übergeben, wird der neueste und älteste Eintrag verwendet.
+     *
+     * @param username Name des (authentifizierten) Users
+     * @param requestDto DTO mit Start- und Enddatum (optional)
+     * @return DTO mit Berechnungsergebnissen
      */
-    public CalculationResultsDto runCalculation(String username, CalculationRequestDto dto) {
+    public CalculationResultsDto runCalculation(String username, CalculationRequestDto requestDto) {
         UserEntity user = userService.findUserByName(username);
-        LocalDateTime endDate = ReuseHelper.getParsedDateTime(dto.endDate());
+
+        // Lokale Variablen
+        TrackingEntity currentEntry;
+        TrackingEntity prevEntry;
+        String logMessage;
+        int DAYS_IN_YEAR = 365;
+        int MONTHS_IN_YEAR = 12;
+
+        // Datumsangaben parsen
+        LocalDateTime startDate = ReuseHelper.getParsedDateTimeNoFallback(requestDto.startDate());
+        LocalDateTime endDate = ReuseHelper.getParsedDateTimeNoFallback(requestDto.endDate());
 
         // User-Konfiguration laden
         ConfigEntity configData = configService.getConfigByUsername(user.getUsername());
@@ -54,22 +68,111 @@ public class CalculationService {
         List<TrackingEntity> trackedData = trackingRepository.findByUserIdOrderByTimestampDesc(user.getId());
 
         // Validierung der Mindestanzahl an Datenpunkten
-        if (trackedData.size() < AppConstants.MIN_DATA_POINTS) throw new GenericException("Not enough data points. At least " + AppConstants.MIN_DATA_POINTS + " are required.", HttpStatus.BAD_REQUEST);
+        if (trackedData.size() < AppConstants.MIN_DATA_POINTS) {
+            throw new GenericException("Not enough data points. At least " + AppConstants.MIN_DATA_POINTS + " are required.", HttpStatus.BAD_REQUEST);
+        }
 
-        // Finde einen Eintrag anhand des Enddatums
-        TrackingEntity currentEntry = trackedData.stream()
-                .filter(e -> e.getTimestamp().toLocalDate().isEqual(endDate.toLocalDate()))
-                .findFirst()
-                .orElseThrow(() -> new GenericException("No entry found for the given end date.", HttpStatus.BAD_REQUEST));
+        if (useDefaultCalculation(startDate, endDate)) {
+            logMessage = "Fallback: Calculation has been executed for the newest and oldest entry.";
+            // Finde den neuesten Eintrag
+            currentEntry = trackedData.getFirst();
+            // Finde den ältesten Eintrag (Referenzwert)
+            prevEntry = trackedData.getLast();
 
-        // Finde den ältesten Eintrag als Referenz
-        TrackingEntity oldestEntry = trackedData.getLast();
+        }else{
+            if (!validDates(startDate, endDate)) {
+                throw new GenericException("Invalid date range: start-date must be before end-date.", HttpStatus.BAD_REQUEST);
+            }
 
-        // TODO: Berechnungslogik
-        Double absDiffTrackedValues = Math.abs(currentEntry.getReadingValue() - oldestEntry.getReadingValue());
+            // Finde die gewünschten Einträge anhand des Datums
+            prevEntry = findEntryByDate(trackedData, startDate.toLocalDate());
+            currentEntry = findEntryByDate(trackedData, endDate.toLocalDate());
 
-        return null; // PLACEHOLDER; TODO: CalculationResultsDto ausgeben
+            logMessage = "Calculation has been executed for the given date range.";
+        }
+
+        // Anzahl der Tage zwischen den beiden Einträgen
+        long daysBetween = ChronoUnit.DAYS.between(prevEntry.getTimestamp().toLocalDate(), currentEntry.getTimestamp().toLocalDate());
+
+        // ***** Berechnungslogik *****
+        double absDiffTrackedValues = Math.abs(currentEntry.getReadingValue() - prevEntry.getReadingValue());
+
+        if (absDiffTrackedValues == 0) {
+            throw new GenericException("No change in tracked values.", HttpStatus.BAD_REQUEST);
+        }
+
+        // Normierter Verbrauch pro Tag [kWh/Tag]
+        double normConsumptionPerDay = absDiffTrackedValues / daysBetween;
+        
+        // Netto Verbrauchspreis berechnen [€/kWh]
+        double netConsumptionPrice = configData.getEnergyPrice()/(1 + configData.getVatRate()) - configData.getEnergyTax();
+        
+        // Netto Verbrauchskosten berechnen [€]
+        double netConsumptionCostPeriod = absDiffTrackedValues * netConsumptionPrice;
+        
+        // Netto Grundpreis berechnen [€]
+        double netBasePrice = configData.getBasePrice()/(1 + configData.getVatRate());
+        
+        // Netto Grundkosten berechnen [€]
+        double netBaseCostPeriod = netBasePrice * MONTHS_IN_YEAR/DAYS_IN_YEAR * daysBetween;
+
+        // Netto Gesamtkosten der Stromsteuer berechnen [€]
+        double netEnergyTaxCostPeriod = configData.getEnergyTax() * absDiffTrackedValues;
+
+        // Netto Gesamtkosten anhand der verbrauchten Energiemenge berechnen [€]
+        double netTotalCostPeriod = (netConsumptionCostPeriod)*(1 + AppConstants.BUFFER_FACTOR) + netBaseCostPeriod + netEnergyTaxCostPeriod;
+
+        // Brutto Gesamtkosten berechnen [€]
+        double bruttoTotalCostPeriod = netTotalCostPeriod * (1 + configData.getVatRate());
+
+        // Gezahlten Abschläge im betrachteten Abrechnungszeitraum
+        double paidAmountPeriod = configData.getMonthlyAdvance() * MONTHS_IN_YEAR/DAYS_IN_YEAR * daysBetween;
+
+        // Brutto Restbetrag berechnen [€]
+        double costDiffPeriod = paidAmountPeriod - bruttoTotalCostPeriod + configData.getAdditionalCredit();
+
+        // Ergebnisse übergeben
+        return new CalculationResultsDto(
+                configData.getMeterIdentifier(),
+                startDate.toLocalDate(),
+                endDate.toLocalDate(),
+                daysBetween,
+                paidAmountPeriod,
+                bruttoTotalCostPeriod,
+                netTotalCostPeriod,
+                absDiffTrackedValues,
+                costDiffPeriod,
+                normConsumptionPerDay,
+                logMessage
+        );
     }
+
+    /**
+     * Hilfsfunktion prüft, ob das Startdatum vor dem Enddatum liegt.
+     */
+    private boolean validDates(LocalDateTime startDate, LocalDateTime endDate){
+        return startDate.isBefore(endDate);
+    }
+
+    /**
+     * Hilfsfunktion prüft, ob das Startdatum oder das Enddatum null ist.
+     */
+    private boolean useDefaultCalculation(LocalDateTime startDate, LocalDateTime endDate){
+        return (startDate == null || endDate == null);
+    }
+
+    /**
+     * Hilfsfunktion, um einen Eintrag anhand eines Datums in TrackingEntity zu finden.
+     */
+    private TrackingEntity findEntryByDate(List<TrackingEntity> trackedData, LocalDate date){
+
+        return trackedData.stream()
+                .filter(e -> e.getTimestamp().toLocalDate().isEqual(date))
+                .findFirst()
+                .orElseThrow(() -> new GenericException("No entry found for the given date.", HttpStatus.BAD_REQUEST));
+    }
+
+    // TODO [11.01.2026]: Berechneten Ergebnisse aus CalculationResultsDto in das calculationRepository schreiben und speichern
 
     /**
      * Ruft nur die gespeicherte Historie ab (ohne Neuberechnung).
@@ -78,4 +181,5 @@ public class CalculationService {
         UserEntity user = userService.findUserByName(username);
         return calculationRepository.findByUserIdOrderByPeriodEndDesc(user.getId());
     }
+
 }

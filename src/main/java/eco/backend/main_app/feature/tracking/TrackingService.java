@@ -182,4 +182,7 @@ public class TrackingService {
 
         return predecessorCheck && successorCheck;
     }
+
+    // TODO [11.01.2026]: Methode zur Prüfung/Sicherstellung, dass nur ein Eintrag je Monat eingetragen ist
+
 }
