@@ -12,6 +12,7 @@ import eco.backend.main_app.feature.tracking.TrackingRepository;
 import eco.backend.main_app.feature.tracking.model.TrackingEntity;
 import eco.backend.main_app.utils.AppConstants;
 import eco.backend.main_app.utils.ReuseHelper;
+import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -50,7 +51,7 @@ public class CalculationService {
     public CalculationResultsDto runCalculation(String username, CalculationRequestDto requestDto) {
         UserEntity user = userService.findUserByName(username);
 
-        // Lokale Variablen
+        // Lokale Parameter
         TrackingEntity currentEntry;
         TrackingEntity prevEntry;
         String logMessage;
@@ -129,7 +130,7 @@ public class CalculationService {
         double paidAmountPeriod = configData.getMonthlyAdvance() * MONTHS_IN_YEAR/DAYS_IN_YEAR * daysBetween;
 
         // Brutto Restbetrag berechnen [€]
-        double costDiffPeriod = paidAmountPeriod - bruttoTotalCostPeriod + configData.getAdditionalCredit();
+        double costDiffPeriod = (paidAmountPeriod - bruttoTotalCostPeriod) + configData.getAdditionalCredit();
 
         // Ergebnisse übergeben
         return new CalculationResultsDto(
@@ -139,7 +140,6 @@ public class CalculationService {
                 daysBetween,
                 paidAmountPeriod,
                 bruttoTotalCostPeriod,
-                netTotalCostPeriod,
                 absDiffTrackedValues,
                 costDiffPeriod,
                 normConsumptionPerDay,
@@ -149,6 +149,9 @@ public class CalculationService {
 
     /**
      * Hilfsfunktion prüft, ob das Startdatum vor dem Enddatum liegt.
+     *
+     * @param startDate Startdatum
+     * @param endDate Enddatum
      */
     private boolean validDates(LocalDateTime startDate, LocalDateTime endDate){
         return startDate.isBefore(endDate);
@@ -156,6 +159,9 @@ public class CalculationService {
 
     /**
      * Hilfsfunktion prüft, ob das Startdatum oder das Enddatum null ist.
+     *
+     * @param startDate Startdatum
+     * @param endDate Enddatum
      */
     private boolean useDefaultCalculation(LocalDateTime startDate, LocalDateTime endDate){
         return (startDate == null || endDate == null);
@@ -163,6 +169,9 @@ public class CalculationService {
 
     /**
      * Hilfsfunktion, um einen Eintrag anhand eines Datums in TrackingEntity zu finden.
+     *
+     * @param trackedData Getrackten Daten als Liste
+     * @param date Zieldatum
      */
     private TrackingEntity findEntryByDate(List<TrackingEntity> trackedData, LocalDate date){
 
@@ -172,10 +181,52 @@ public class CalculationService {
                 .orElseThrow(() -> new GenericException("No entry found for the given date.", HttpStatus.BAD_REQUEST));
     }
 
-    // TODO [11.01.2026]: Berechneten Ergebnisse aus CalculationResultsDto in das calculationRepository schreiben und speichern
+    /**
+     * Speichert oder aktualisiert das Berechnungsergebnis in der Datenbank.
+     *
+     * @param username Der Name des (authentifizierten) Users
+     * @param results Das DTO mit den Berechnungsergebnissen
+     */
+    @Transactional
+    public CalculationEntity saveResultsInEntity(String username, CalculationResultsDto results) {
+        UserEntity user = userService.findUserByName(username);
+
+        // Konvertierung: LocalDate (DTO) -> LocalDateTime (Entity)
+        // Die Uhrzeit wird per Default auf 00:00:00 gesetzt
+        LocalDateTime startTimestamp = results.startDate().atStartOfDay();
+        LocalDateTime endTimestamp = results.endDate().atStartOfDay();
+
+        // Prüfen: Gibt es schon einen Eintrag für dieses Enddatum?
+        // Dies verhindert Duplikate, wenn der User am selben Tag mehrfach rechnet.
+        CalculationEntity entityToSave = calculationRepository
+                .findByUserIdAndPeriodEnd(user.getId(), endTimestamp)
+                .orElse(new CalculationEntity()); // Falls kein Eintrag gefunden wurde, wird eine neue leere Zeile in der Tabelle angelegt
+
+        // Werte setzen: Bei neuem Objekt (ID ist null) müssen User und Enddatum gesetzt werden
+        if (entityToSave.getId() == null) {
+            entityToSave.setUser(user);
+            entityToSave.setPeriodEnd(endTimestamp);
+        }
+
+        // Diese Werte werden IMMER aktualisiert
+        entityToSave.setPeriodStart(startTimestamp);
+        entityToSave.setTotalCostsPeriod(results.bruttoTotalCostPeriod());
+        entityToSave.setCostDiffPeriod(results.costDiffPeriod());
+        entityToSave.setDaysPeriod(results.daysBetween());
+        entityToSave.setSumUsedEnergy(results.totalConsumptionKwh());
+        entityToSave.setPaidAmountPeriod(results.paidAmountPeriod());
+        entityToSave.setUsedEnergyPerDay(results.usedEnergyPerDay());
+
+        // Speichern
+        calculationRepository.save(entityToSave);
+
+        return entityToSave;
+    }
 
     /**
      * Ruft nur die gespeicherte Historie ab (ohne Neuberechnung).
+     *
+     * @param username Der Name des (authentifizierten) Users
      */
     public List<CalculationEntity> getHistory(String username) {
         UserEntity user = userService.findUserByName(username);

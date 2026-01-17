@@ -9,9 +9,8 @@ public record CalculationResultsDto(
         long daysBetween,               // Anzahl der Tage in der Abrechnungszeit
         double paidAmountPeriod,        // Summe der Einzahlungen über den Abrechnungszeitraum[€]
         double bruttoTotalCostPeriod,   // Gesamtkosten (brutto) anhand der verbrauchten Energiemenge [€]
-        double netTotalCostPeriod,      // Gesamtkosten (netto) anhand der verbrauchten Energiemenge [€]
         double totalConsumptionKwh,     // Summe der bisher verbrauchte Energiemenge [kWh]
         double costDiffPeriod,          // Brutto Restbetrag [€]: Positiv = Nachzahlung, Negativ = Guthaben
-        double consumptionPerDay,       // Durchschnittlicher Energieverbrauch pro Tag [kWh/Tag]
+        double usedEnergyPerDay,        // Durchschnittlicher Energieverbrauch pro Tag [kWh/Tag]
         String logMessage
 ) {}
