@@ -43,13 +43,16 @@ CREATE UNIQUE INDEX idx_configs_user_unique ON configs(user_id);
 -- 4. Tabelle: CALCULATED_RESULTS (Sub-Tabelle)
 -- Fertige Berechnungsergebnisse (Caching für Historie/Visualisierung).
 CREATE TABLE calculated_results (
-    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
-    period_start       TEXT    NOT NULL, -- Abrechnungszeitraum Start
-    period_end         TEXT    NOT NULL, -- Abrechnungszeitraum Ende
-    total_costs_period REAL    NOT NULL, -- Gesamtkosten in EUR
-    cost_diff_period   REAL    NOT NULL, -- Nachzahlung (>0) oder Rückerstattung (<0)
-    sum_used_energy    REAL    NOT NULL, -- Verbrauch in kWh
-    user_id            INTEGER NOT NULL, -- Gehört zu diesem User
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    period_start        TEXT    NOT NULL, -- Abrechnungszeitraum Start
+    period_end          TEXT    NOT NULL, -- Abrechnungszeitraum Ende
+    days_period         INTEGER NOT NULL, -- Anzahl der Tage in der Abrechnungszeit
+    payments_period     REAL    NOT NULL, -- Summe der Einzahlungen über den Abrechnungszeitraum
+    total_costs_period  REAL    NOT NULL, -- Gesamtkosten in EUR [Brutto]
+    cost_diff_period    REAL    NOT NULL, -- Nachzahlung (>0) oder Rückerstattung (<0)
+    sum_used_energy     REAL    NOT NULL, -- Verbrauch in kWh
+    used_energy_per_day REAL    NOT NULL, -- Durchschnittlicher Energieverbrauch pro Tag [kWh/Tag]
+    user_id             INTEGER NOT NULL, -- Gehört zu diesem User
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 CREATE INDEX idx_results_user_period ON calculated_results(user_id, period_end);
