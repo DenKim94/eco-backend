@@ -22,7 +22,6 @@ public class ConfigController {
      */
     @GetMapping
     public ResponseEntity<ConfigEntity> getConfig(@AuthenticationPrincipal UserDetails userDetails) {
-        // Wir delegieren einfach an den Service
         ConfigEntity config = configService.getConfigByUsername(userDetails.getUsername());
         return ResponseEntity.ok(config);
     }
