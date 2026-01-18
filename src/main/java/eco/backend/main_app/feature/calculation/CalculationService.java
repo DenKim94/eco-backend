@@ -54,7 +54,7 @@ public class CalculationService {
         // Lokale Parameter
         TrackingEntity currentEntry;
         TrackingEntity prevEntry;
-        String logMessage;
+        String logMessage = null;
         int DAYS_IN_YEAR = 365;
         int MONTHS_IN_YEAR = 12;
 
@@ -88,8 +88,6 @@ public class CalculationService {
             // Finde die gewünschten Einträge anhand des Datums
             prevEntry = findEntryByDate(trackedData, startDate.toLocalDate());
             currentEntry = findEntryByDate(trackedData, endDate.toLocalDate());
-
-            logMessage = "Calculation has been executed for the given date range.";
         }
 
         // Anzahl der Tage zwischen den beiden Einträgen
@@ -101,6 +99,14 @@ public class CalculationService {
         if (absDiffTrackedValues == 0) {
             throw new GenericException("No change in tracked values.", HttpStatus.BAD_REQUEST);
         }
+
+        // TODO [TBD]: Berechnung in getExpectedAmountPeriod() wirklich notwendig/sinnvoll?
+        ExpectedAmountMonthsResult amountPeriod = getExpectedAmountPeriod(prevEntry.getTimestamp().toLocalDate(),
+                currentEntry.getTimestamp().toLocalDate(),
+                configData.getDueDay(),
+                configData.getSepaProcessingDays());
+
+        if (amountPeriod.message != null) { logMessage = amountPeriod.message; }
 
         // Normierter Verbrauch pro Tag [kWh/Tag]
         double normConsumptionPerDay = absDiffTrackedValues / daysBetween;
@@ -121,13 +127,13 @@ public class CalculationService {
         double netEnergyTaxCostPeriod = configData.getEnergyTax() * absDiffTrackedValues;
 
         // Netto Gesamtkosten anhand der verbrauchten Energiemenge berechnen [€]
-        double netTotalCostPeriod = (netConsumptionCostPeriod)*(1 + AppConstants.BUFFER_FACTOR) + netBaseCostPeriod + netEnergyTaxCostPeriod;
+        double netTotalCostPeriod = (netConsumptionCostPeriod) + netBaseCostPeriod + netEnergyTaxCostPeriod;
 
         // Brutto Gesamtkosten berechnen [€]
         double bruttoTotalCostPeriod = netTotalCostPeriod * (1 + configData.getVatRate());
 
         // Gezahlten Abschläge im betrachteten Abrechnungszeitraum
-        double paidAmountPeriod = configData.getMonthlyAdvance() * MONTHS_IN_YEAR/DAYS_IN_YEAR * daysBetween;
+        double paidAmountPeriod = configData.getMonthlyAdvance() * amountPeriod.expectedMonths/DAYS_IN_YEAR * daysBetween;
 
         // Brutto Restbetrag berechnen [€]
         double costDiffPeriod = (paidAmountPeriod - bruttoTotalCostPeriod) + configData.getAdditionalCredit();
@@ -135,8 +141,8 @@ public class CalculationService {
         // Ergebnisse übergeben
         return new CalculationResultsDto(
                 configData.getMeterIdentifier(),
-                startDate.toLocalDate(),
-                endDate.toLocalDate(),
+                prevEntry.getTimestamp().toLocalDate(),
+                currentEntry.getTimestamp().toLocalDate(),
                 daysBetween,
                 paidAmountPeriod,
                 bruttoTotalCostPeriod,
@@ -233,4 +239,48 @@ public class CalculationService {
         return calculationRepository.findByUserIdOrderByPeriodEndDesc(user.getId());
     }
 
+    /**
+     * Hilfsfunktion berechnet die voraussichtliche Anzahl der Abrechnungsmonate
+     * anhand der übergebenen Parameter
+     *
+     * @param startDate Startdatum des Abrechnungszeitraums
+     * @param endDate Enddatum des Abrechnungszeitraums
+     * @param dueDay Abbuchungstag im Monat
+     * @param sepaProcessingDays Anzahl der Tage für die Lastschriftankündigung (SEPA)
+     *
+     * @return ExpectedAmountMonthsResult: record (int expectedMonths, String message)
+     */
+    public ExpectedAmountMonthsResult getExpectedAmountPeriod(LocalDate startDate, LocalDate endDate,
+                                                              Integer dueDay, Integer sepaProcessingDays) {
+        int expectedMonths = 0;
+        String message = null;
+
+        // Finde den ERSTEN möglichen Zahltag nach Vertragsbeginn,
+        // wenn Vertrag am 22.07. startet, ist der 05.07. vorbei,
+        // d.h. der 05.08. ist theoretisch der erste Abrechnungsmonat.
+        LocalDate firstDue = startDate.withDayOfMonth(dueDay);
+        if (firstDue.isBefore(startDate)) {
+            firstDue = firstDue.plusMonths(1);
+            message = "Installment months were skipped.";
+        }
+
+        // Realitätsnahe Optimierung/Annahme:
+        // Viele Versorger brauchen mind. 14 Tage Vorlauf für SEPA.
+        // Wenn z.B. Start=22.07. und dueDay=05.08. (nur 14 Tage), wird das oft übersprungen!
+        if (ChronoUnit.DAYS.between(startDate, firstDue) <= sepaProcessingDays) {
+            firstDue = firstDue.plusMonths(1);
+            message = "Installment months were skipped.";
+        }
+
+        while (!firstDue.isAfter(endDate)) {
+            expectedMonths++;
+            firstDue = firstDue.plusMonths(1);
+        }
+
+        if(message != null){ message = message + " Expected billing months: " + expectedMonths; }
+
+        return new ExpectedAmountMonthsResult(expectedMonths, message);
+    }
+
+    public record ExpectedAmountMonthsResult(int expectedMonths, String message) {}
 }
