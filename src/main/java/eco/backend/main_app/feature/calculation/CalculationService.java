@@ -236,6 +236,9 @@ public class CalculationService {
      */
     public List<CalculationEntity> getHistory(String username) {
         UserEntity user = userService.findUserByName(username);
+
+        // TODO: Das älteste Ergebnis muss oben (bzw. an erster Stelle in der Tabelle) sein
+
         return calculationRepository.findByUserIdOrderByPeriodEndDesc(user.getId());
     }
 
