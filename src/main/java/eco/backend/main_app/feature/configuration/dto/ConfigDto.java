@@ -7,5 +7,7 @@ public record ConfigDto(
         Double vatRate,
         Double monthlyAdvance,
         Double additionalCredit,
+        Integer dueDate,
+        Integer sepaProcessingDays,
         String meterIdentifier
 ) {}

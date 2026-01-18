@@ -26,15 +26,17 @@ CREATE INDEX idx_readings_user ON meter_readings(user_id, timestamp);
 -- 3. Tabelle: CONFIGS (Sub-Tabelle)
 -- Preise & Tarifeinstellungen pro User.
 CREATE TABLE configs (
-    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
-    base_price          REAL NOT NULL, -- Grundpreis EUR/Monat (brutto)
-    energy_price        REAL NOT NULL, -- Verbrauchspreis EUR/kWh (brutto)
-    energy_tax          REAL NOT NULL, -- Stromsteuer in EUR/kWh
-    vat_rate            REAL NOT NULL, -- Umsatzsteuer (z.B. 0.19)
-    monthly_advance     REAL NOT NULL, -- Monatlicher Abschlag in EUR/Monat
-    additional_credit   REAL NOT NULL DEFAULT 0.0, -- Guthaben in EUR
-    meter_identifier    TEXT NOT NULL,    -- Zählernummer
-    user_id             INTEGER NOT NULL,
+    id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+    base_price              REAL NOT NULL,      -- Grundpreis EUR/Monat (brutto)
+    energy_price            REAL NOT NULL,      -- Verbrauchspreis EUR/kWh (brutto)
+    energy_tax              REAL NOT NULL,      -- Stromsteuer in EUR/kWh
+    vat_rate                REAL NOT NULL,      -- Umsatzsteuer (z.B. 0.19)
+    monthly_advance         REAL NOT NULL,      -- Monatlicher Abschlag in EUR/Monat
+    additional_credit       REAL NOT NULL DEFAULT 0.0, -- Guthaben in EUR
+    due_day                 INTEGER NOT NULL,   -- Abrechnungstag im Monat (z.B. 5: Zum 5. des Monats)
+    sepa_processing_days    INTEGER NOT NULL,   -- Anzahl der Tage für die Lastschriftankündigung (SEPA)
+    meter_identifier        TEXT NOT NULL,      -- Zählernummer
+    user_id                 INTEGER NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 CREATE UNIQUE INDEX idx_configs_user_unique ON configs(user_id);

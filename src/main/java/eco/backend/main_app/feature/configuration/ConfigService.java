@@ -61,12 +61,14 @@ public class ConfigService {
 
         ConfigEntity config = getConfigByUsername(username);
 
-        // Werte aus DTO übertragen (nur wenn nicht null, um versehentliches Löschen zu vermeiden)
+        // Werte aus DTO übertragen (nur wenn ungleich null)
         if (dto.basePrice() != null) config.setBasePrice(dto.basePrice());
         if (dto.energyPrice() != null) config.setEnergyPrice(dto.energyPrice());
         if (dto.energyTax() != null) config.setEnergyTax(dto.energyTax());
         if (dto.vatRate() != null) config.setVatRate(dto.vatRate());
         if (dto.monthlyAdvance() != null) config.setMonthlyAdvance(dto.monthlyAdvance());
+        if (dto.dueDate() != null) config.setDueDay(dto.dueDate());
+        if (dto.sepaProcessingDays() != null) config.setSepaProcessingDays(dto.sepaProcessingDays());
         if (dto.additionalCredit() != null) config.setAdditionalCredit(dto.additionalCredit());
         if (dto.meterIdentifier() != null) config.setMeterIdentifier(dto.meterIdentifier());
 

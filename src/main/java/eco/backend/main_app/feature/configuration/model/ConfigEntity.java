@@ -29,7 +29,13 @@ public class ConfigEntity {
     private Double monthlyAdvance = 50.0;   // Monatlicher Abschlag in EUR/Monat
 
     @Column(name = "additional_credit", nullable = false)
-    private Double additionalCredit = 0.0;          // Guthaben in EUR
+    private Double additionalCredit = 0.0;  // Guthaben in EUR
+
+    @Column(name = "due_day", nullable = false)
+    private Integer dueDay = 5;             // Abrechnungstag im Monat (z.B. 5: Zum 5. des Monats)
+
+    @Column(name = "sepa_processing_days", nullable = false)
+    private Integer sepaProcessingDays = 15; // Anzahl der Tage für die Lastschriftankündigung (SEPA)
 
     @Column(name = "meter_identifier", nullable = false)
     private String meterIdentifier = "EMPTY-METER-ID"; // Zählernummer
@@ -57,6 +63,10 @@ public class ConfigEntity {
     public Double getMonthlyAdvance(){ return this.monthlyAdvance; }
     public void setAdditionalCredit(Double additionalCredit){ this.additionalCredit = additionalCredit; }
     public Double getAdditionalCredit(){ return this.additionalCredit; }
+    public void setDueDay(Integer dueDay){ this.dueDay = dueDay; }
+    public Integer getDueDay(){ return this.dueDay; }
+    public void setSepaProcessingDays(Integer processingDays){ this.sepaProcessingDays = processingDays; }
+    public Integer getSepaProcessingDays(){ return this.sepaProcessingDays; }
     public void setMeterIdentifier(String meterIdentifier){ this.meterIdentifier = meterIdentifier; }
     public String getMeterIdentifier(){ return this.meterIdentifier; }
 }
