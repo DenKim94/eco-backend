@@ -10,7 +10,4 @@ public class AppConstants {
     /** Mindestanzahl an Datenpunkten, die für die Berechnung notwendig sind */
     public static final int MIN_DATA_POINTS = 2;
 
-    /** Puffer als Aufschlag-Faktor für die Kostenberechnung [relativer Wert zwischen 0 und 1]:
-     * z.B. 0.025 = 2.5 % Puffer */
-    public static final double BUFFER_FACTOR = 0.025; //
 }
