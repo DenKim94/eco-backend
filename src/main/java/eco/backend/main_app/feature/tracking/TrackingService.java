@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class TrackingService {
@@ -27,7 +28,7 @@ public class TrackingService {
     /** Alle getrackten Daten des Users laden */
     public List<TrackingEntity> getAllEntries(String username) {
         UserEntity user = userService.findUserByName(username);
-        return repository.findByUserIdOrderByTimestampDesc(user.getId());
+        return repository.findByUserIdOrderByTimestampAsc(user.getId());
     }
 
     /** Eintrag hinzufügen */
@@ -43,9 +44,10 @@ public class TrackingService {
         LocalDateTime timestamp = ReuseHelper.getParsedDateTime(dto.date());
         entity.setTimestamp(timestamp);
 
-        if (!isValidTrackingValue(username, dto)) {
-            throw new GenericException("Invalid entry properties.", HttpStatus.BAD_REQUEST);
-        }
+        isValidTrackingValue(username, dto).ifPresent(errorMsg -> {
+            throw new GenericException(errorMsg, HttpStatus.BAD_REQUEST);
+        });
+
         return repository.save(entity);
     }
 
@@ -81,39 +83,46 @@ public class TrackingService {
     @Transactional
     public TrackingEntity updateEntryById(String username, Long id, TrackingDto updateDto) {
 
+        if (updateDto.date().isBlank() && updateDto.value_kWh() == null){
+            throw new GenericException("Update failed: No data provided.", HttpStatus.BAD_REQUEST);
+        }
+
         // Den User laden, der die Anfrage stellt
         UserEntity currentUser = userService.findUserByName(username);
 
         // Den existierenden Eintrag aus der DB holen
-        TrackingEntity existingEntry = getEntryById(id);
+        TrackingEntity entryToUpdate = getEntryById(id);
 
         // CHECK: Gehört der Eintrag zum korrekten User?
         // Wenn die USer-IDs nicht übereinstimmen, dürfen die Daten nicht geändert werden
-        if (!existingEntry.getUser().getId().equals(currentUser.getId())) {
-            throw new GenericException("You are not allowed to update this entry.", HttpStatus.FORBIDDEN);
+        if (!entryToUpdate.getUser().getId().equals(currentUser.getId())) {
+            throw new GenericException("Update failed: Invalid entry ID.", HttpStatus.BAD_REQUEST);
         }
 
-        LocalDateTime updatedDate = updateDto.date().isBlank() ? existingEntry.getTimestamp() : ReuseHelper.getParsedDateTime(updateDto.date()) ;
-
-        // Wert und Datum aktualisieren (Mapping)
-        existingEntry.setReadingValue(updateDto.value_kWh());
-        existingEntry.setTimestamp(updatedDate);
+        LocalDateTime updatedDate = updateDto.date().isBlank() ? entryToUpdate.getTimestamp() : ReuseHelper.getParsedDateTime(updateDto.date()) ;
+        Double value_kWh = (updateDto.value_kWh() != null) ? updateDto.value_kWh() : entryToUpdate.getReadingValue();
 
         // CHECK: Validierung
-        if (!isValidUpdatedValue(existingEntry, updateDto.value_kWh(), updatedDate)){
-            throw new GenericException("Update failed: Invalid entry properties.", HttpStatus.BAD_REQUEST);
+        isValidUpdatedDto(entryToUpdate, value_kWh, updatedDate).ifPresent(errorMsg -> {
+            throw new GenericException(errorMsg, HttpStatus.BAD_REQUEST);
+        });
+
+        // Wert und Datum aktualisieren (Mapping)
+        if (updateDto.value_kWh() != null){
+            entryToUpdate.setReadingValue(updateDto.value_kWh());
         }
+        entryToUpdate.setTimestamp(updatedDate);
 
         // Speichern
-        return repository.save(existingEntry);
+        return repository.save(entryToUpdate);
     }
 
     /** Hilfsmethode: Validierung des getrackten Eintrags */
-    public boolean isValidTrackingValue(String username, TrackingDto dto) {
+    public Optional<String> isValidTrackingValue(String username, TrackingDto dto) {
 
         // CHECK: Wert darf nicht null oder negativ sein
         if (dto.value_kWh() == null || dto.value_kWh() < 0) {
-            return false;
+            return Optional.of("Validation error: Provided value is null or negative.");
         }
 
         TrackingEntity lastEntry = getNewestEntry(username);
@@ -121,33 +130,41 @@ public class TrackingService {
 
         // CHECK: Wenn es keinen letzten Eintrag gibt, ist der Wert gültig
         if (lastEntry == null || lastEntry.getReadingValue() == null) {
-            return true;
+            return Optional.empty();
         }
 
         // CHECK: Aktueller Eintrag darf nicht ÄLTER sein als der letzte Eintrag
-        if (currentTimestamp.isBefore(lastEntry.getTimestamp())) {
-            return false;
+        if (currentTimestamp.toLocalDate().isBefore(lastEntry.getTimestamp().toLocalDate())) {
+            return Optional.of("Validation error: Invalid date of provided value.");
+        }
+
+        // CHECK: Es darf noch kein Eintrag am selben Tag existieren (ignoriert Uhrzeit)
+        boolean isSameDay = currentTimestamp.toLocalDate().isEqual(lastEntry.getTimestamp().toLocalDate());
+        if (isSameDay) {
+            return Optional.of("Validation error: Entry already exists for provided date.");
         }
 
         // CHECK: Wert muss größer sein als der vorherige
-        return (dto.value_kWh() >= lastEntry.getReadingValue());
+        return (dto.value_kWh() > lastEntry.getReadingValue()) ?
+                Optional.empty() :
+                Optional.of("Validation error: The value of the current entry must be greater than that of the previous entry.");
     }
 
     /**
-     * Validiert ein Update: Prüft gegen Vorgänger und Nachfolger (Sandwich-Check).
+     * Validiert ein Update: Prüft Wert und Datum gegen Vorgänger bzw. Nachfolger (Sandwich-Check).
      *
      * @param entityToUpdate Der Eintrag, der gerade bearbeitet wird (mit seiner ID und dem ALTEN Timestamp).
-     * @param newValue Der neue Zählerstand (vom DTO).
+     * @param value_kWh Der neue Zählerstand (vom DTO).
      * @param newTimestamp Das neue Datum (vom DTO oder das alte, falls nicht geändert).
      * @return true, wenn das Update gültig ist.
      */
-    public boolean isValidUpdatedValue(TrackingEntity entityToUpdate, Double newValue, LocalDateTime newTimestamp) {
+    public Optional<String> isValidUpdatedDto(TrackingEntity entityToUpdate, Double value_kWh, LocalDateTime newTimestamp) {
 
         boolean predecessorCheck = false;
 
-        // CHECK: Nicht null, nicht negativ
-        if (newValue == null || newValue < 0) {
-            return false;
+        // CHECK: Wert darf nicht negativ sein
+        if (value_kWh < 0) {
+            return Optional.of("Update failed: Provided value is negative.");
         }
 
         Long userId = entityToUpdate.getUser().getId();
@@ -163,26 +180,23 @@ public class TrackingService {
 
         // Falls nur ein Eintrag in der Datenbank vorhanden ist, ist der Wert gültig
         if (predecessor == null && successor == null) {
-            return true;
+            return Optional.empty();
         }
 
         // --- PRÜFUNG GEGEN VORGÄNGER ---
         if (predecessor != null) {
-            predecessorCheck = newValue >= predecessor.getReadingValue() && !newTimestamp.isBefore(predecessor.getTimestamp());
+            predecessorCheck = value_kWh > predecessor.getReadingValue() && !newTimestamp.isBefore(predecessor.getTimestamp());
             if (successor == null) {
-                return predecessorCheck;
+                return predecessorCheck ? Optional.empty() : Optional.of("Update failed: Conflict with previous entry.");
             }
         }
 
         // --- PRÜFUNG GEGEN NACHFOLGER ---
-        boolean successorCheck = newValue <= successor.getReadingValue() && !newTimestamp.isAfter(successor.getTimestamp());
+        boolean successorCheck = value_kWh < successor.getReadingValue() && !newTimestamp.isAfter(successor.getTimestamp());
         if (predecessor == null) {
-            return successorCheck;
+            return successorCheck ? Optional.empty() : Optional.of("Update failed: Conflict with the following entry.");
         }
 
-        return predecessorCheck && successorCheck;
+        return (predecessorCheck && successorCheck)? Optional.empty() : Optional.of("Update failed: Provided entry has invalid values.");
     }
-
-    // TODO [11.01.2026]: Methode zur Prüfung/Sicherstellung, dass nur ein Eintrag je Monat eingetragen ist
-
 }

@@ -8,8 +8,11 @@ import java.util.List;
 import java.util.Optional;
 
 public interface TrackingRepository extends JpaRepository<TrackingEntity, Long> {
-    // Alle Ablesungen eines Users finden, sortiert nach Datum (neueste zuerst)
+    // Alle Ablesungen eines Users finden, sortiert nach Datum (neuester Eintrag zuerst)
     List<TrackingEntity> findByUserIdOrderByTimestampDesc(Long userId);
+
+    // Alle Ablesungen eines Users finden, sortiert nach Datum (ältester Eintrag zuerst)
+    List<TrackingEntity> findByUserIdOrderByTimestampAsc(Long userId);
 
     // Finde den neuesten Eintrag
     Optional<TrackingEntity> findFirstByUserIdOrderByTimestampDesc(Long userId);
@@ -25,6 +28,4 @@ public interface TrackingRepository extends JpaRepository<TrackingEntity, Long> 
     // Eintrag über Datum (Timestamp) finden
     Optional<TrackingEntity> findByUserIdAndTimestamp(Long userId, LocalDateTime timestamp);
 
-    // Den ältesten Eintrag finden
-    Optional<TrackingEntity> findFirstByUserIdOrderByTimestampAsc(Long userId);
 }
