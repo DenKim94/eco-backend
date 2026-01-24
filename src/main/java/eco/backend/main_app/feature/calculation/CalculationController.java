@@ -27,11 +27,11 @@ public class CalculationController {
      * PUT /api/calculation/run-and-save: Führt die Berechnung aus und speichert die Ergebnisse
      */
     @PostMapping("/run-and-save")
-    public ResponseEntity<CalculationEntity> runCalculation(@AuthenticationPrincipal UserDetails userDetails, @RequestBody CalculationRequestDto dto) {
+    public ResponseEntity<CalculationResultsDto> runCalculation(@AuthenticationPrincipal UserDetails userDetails, @RequestBody CalculationRequestDto dto) {
         CalculationResultsDto results = calculationService.runCalculation(userDetails.getUsername(), dto);
-        CalculationEntity savedResults = calculationService.saveResultsInEntity(userDetails.getUsername(), results);
+        calculationService.saveResultsInEntity(userDetails.getUsername(), results);
 
-        return ResponseEntity.ok(savedResults);
+        return ResponseEntity.ok(results);
     }
 
     /**

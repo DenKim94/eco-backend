@@ -8,8 +8,12 @@ import java.util.List;
 import java.util.Optional;
 
 public interface CalculationRepository extends JpaRepository<CalculationEntity, Long> {
-    // Historie abrufen (neueste zuerst)
+
+    // Historie abrufen (neuester Eintrag zuerst)
     List<CalculationEntity> findByUserIdOrderByPeriodEndDesc(Long userId);
+
+    // Historie abrufen (ältester Eintrag zuerst)
+    List<CalculationEntity> findByUserIdOrderByPeriodEndAsc(Long userId);
 
     // Optional; Suche nach exaktem Eintrag (User + End-Zeitpunkt)
     Optional<CalculationEntity> findByUserIdAndPeriodEnd(Long userId, LocalDateTime periodEnd);

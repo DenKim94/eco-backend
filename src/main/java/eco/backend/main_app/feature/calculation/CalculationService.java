@@ -59,7 +59,7 @@ public class CalculationService {
         int MONTHS_IN_YEAR = 12;
 
         // Datumsangaben parsen
-        LocalDateTime startDate = ReuseHelper.getParsedDateTimeNoFallback(requestDto.startDate());
+        LocalDateTime startDate = ReuseHelper.getParsedDateTimeNoFallback(requestDto.startDate()); // TODO: Das Datum muss aus Configs entnommen werden --> Referenzdatum
         LocalDateTime endDate = ReuseHelper.getParsedDateTimeNoFallback(requestDto.endDate());
 
         // User-Konfiguration laden
@@ -73,49 +73,36 @@ public class CalculationService {
             throw new GenericException("Not enough data points. At least " + AppConstants.MIN_DATA_POINTS + " are required.", HttpStatus.BAD_REQUEST);
         }
 
-        if (useDefaultCalculation(startDate, endDate)) {
-            logMessage = "Fallback: Calculation has been executed for the newest and oldest entry.";
-            // Finde den neuesten Eintrag
-            currentEntry = trackedData.getFirst();
-            // Finde den ältesten Eintrag (Referenzwert)
-            prevEntry = trackedData.getLast();
+        // Die gewünschten Einträge anhand des Datums finden, sonst Fallback auf den neuesten und ältesten Eintrag
+        prevEntry = (startDate == null) ? trackedData.getLast() : findEntryByDate(trackedData, startDate.toLocalDate());
+        currentEntry = (endDate == null) ? trackedData.getFirst() : findEntryByDate(trackedData, endDate.toLocalDate());
 
-        }else{
-            if (!validDates(startDate, endDate)) {
-                throw new GenericException("Invalid date range: start-date must be before end-date.", HttpStatus.BAD_REQUEST);
-            }
-
-            // Finde die gewünschten Einträge anhand des Datums
-            prevEntry = findEntryByDate(trackedData, startDate.toLocalDate());
-            currentEntry = findEntryByDate(trackedData, endDate.toLocalDate());
+        // Prüfung des Datums
+        if (!validDates(prevEntry.getTimestamp(), currentEntry.getTimestamp())) {
+            throw new GenericException("Invalid date values: The start date must be before the end date.", HttpStatus.BAD_REQUEST);
         }
 
         // Anzahl der Tage zwischen den beiden Einträgen
         long daysBetween = ChronoUnit.DAYS.between(prevEntry.getTimestamp().toLocalDate(), currentEntry.getTimestamp().toLocalDate());
 
         // ***** Berechnungslogik *****
-        double absDiffTrackedValues = Math.abs(currentEntry.getReadingValue() - prevEntry.getReadingValue());
+        double diffTrackedValues = currentEntry.getReadingValue() - prevEntry.getReadingValue();
 
-        if (absDiffTrackedValues == 0) {
-            throw new GenericException("No change in tracked values.", HttpStatus.BAD_REQUEST);
-        }
-
-        // TODO [TBD]: Berechnung in getExpectedAmountPeriod() wirklich notwendig/sinnvoll?
         ExpectedAmountMonthsResult amountPeriod = getExpectedAmountPeriod(prevEntry.getTimestamp().toLocalDate(),
-                currentEntry.getTimestamp().toLocalDate(),
-                configData.getDueDay(),
-                configData.getSepaProcessingDays());
+                                                                            currentEntry.getTimestamp().toLocalDate(),
+                                                                            configData.getDueDay(),
+                                                                            configData.getSepaProcessingDays());
 
         if (amountPeriod.message != null) { logMessage = amountPeriod.message; }
 
         // Normierter Verbrauch pro Tag [kWh/Tag]
-        double normConsumptionPerDay = absDiffTrackedValues / daysBetween;
+        double normConsumptionPerDay = diffTrackedValues / daysBetween;
         
         // Netto Verbrauchspreis berechnen [€/kWh]
         double netConsumptionPrice = configData.getEnergyPrice()/(1 + configData.getVatRate()) - configData.getEnergyTax();
         
         // Netto Verbrauchskosten berechnen [€]
-        double netConsumptionCostPeriod = absDiffTrackedValues * netConsumptionPrice;
+        double netConsumptionCostPeriod = diffTrackedValues * netConsumptionPrice;
         
         // Netto Grundpreis berechnen [€]
         double netBasePrice = configData.getBasePrice()/(1 + configData.getVatRate());
@@ -124,7 +111,7 @@ public class CalculationService {
         double netBaseCostPeriod = netBasePrice * MONTHS_IN_YEAR/DAYS_IN_YEAR * daysBetween;
 
         // Netto Gesamtkosten der Stromsteuer berechnen [€]
-        double netEnergyTaxCostPeriod = configData.getEnergyTax() * absDiffTrackedValues;
+        double netEnergyTaxCostPeriod = configData.getEnergyTax() * diffTrackedValues;
 
         // Netto Gesamtkosten anhand der verbrauchten Energiemenge berechnen [€]
         double netTotalCostPeriod = (netConsumptionCostPeriod) + netBaseCostPeriod + netEnergyTaxCostPeriod;
@@ -146,7 +133,7 @@ public class CalculationService {
                 daysBetween,
                 paidAmountPeriod,
                 bruttoTotalCostPeriod,
-                absDiffTrackedValues,
+                diffTrackedValues,
                 costDiffPeriod,
                 normConsumptionPerDay,
                 logMessage
@@ -161,16 +148,6 @@ public class CalculationService {
      */
     private boolean validDates(LocalDateTime startDate, LocalDateTime endDate){
         return startDate.isBefore(endDate);
-    }
-
-    /**
-     * Hilfsfunktion prüft, ob das Startdatum oder das Enddatum null ist.
-     *
-     * @param startDate Startdatum
-     * @param endDate Enddatum
-     */
-    private boolean useDefaultCalculation(LocalDateTime startDate, LocalDateTime endDate){
-        return (startDate == null || endDate == null);
     }
 
     /**
@@ -194,7 +171,7 @@ public class CalculationService {
      * @param results Das DTO mit den Berechnungsergebnissen
      */
     @Transactional
-    public CalculationEntity saveResultsInEntity(String username, CalculationResultsDto results) {
+    public void saveResultsInEntity(String username, CalculationResultsDto results) {
         UserEntity user = userService.findUserByName(username);
 
         // Konvertierung: LocalDate (DTO) -> LocalDateTime (Entity)
@@ -225,8 +202,6 @@ public class CalculationService {
 
         // Speichern
         calculationRepository.save(entityToSave);
-
-        return entityToSave;
     }
 
     /**
@@ -237,9 +212,7 @@ public class CalculationService {
     public List<CalculationEntity> getHistory(String username) {
         UserEntity user = userService.findUserByName(username);
 
-        // TODO: Das älteste Ergebnis muss oben (bzw. an erster Stelle in der Tabelle) sein
-
-        return calculationRepository.findByUserIdOrderByPeriodEndDesc(user.getId());
+        return calculationRepository.findByUserIdOrderByPeriodEndAsc(user.getId());
     }
 
     /**
@@ -253,13 +226,13 @@ public class CalculationService {
      *
      * @return ExpectedAmountMonthsResult: record (int expectedMonths, String message)
      */
-    public ExpectedAmountMonthsResult getExpectedAmountPeriod(LocalDate startDate, LocalDate endDate,
+    private ExpectedAmountMonthsResult getExpectedAmountPeriod(LocalDate startDate, LocalDate endDate,
                                                               Integer dueDay, Integer sepaProcessingDays) {
         int expectedMonths = 0;
         String message = null;
 
         // Finde den ERSTEN möglichen Zahltag nach Vertragsbeginn,
-        // wenn Vertrag am 22.07. startet, ist der 05.07. vorbei,
+        // wenn Vertrag am 22.07. startet, ist der dueDay (z.B. 05.07.) vorbei,
         // d.h. der 05.08. ist theoretisch der erste Abrechnungsmonat.
         LocalDate firstDue = startDate.withDayOfMonth(dueDay);
         if (firstDue.isBefore(startDate)) {
@@ -285,5 +258,5 @@ public class CalculationService {
         return new ExpectedAmountMonthsResult(expectedMonths, message);
     }
 
-    public record ExpectedAmountMonthsResult(int expectedMonths, String message) {}
+    private record ExpectedAmountMonthsResult(int expectedMonths, String message) {}
 }
