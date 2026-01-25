@@ -9,10 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
@@ -21,14 +18,18 @@ import java.util.Map;
 public class AuthController {
     private final AuthService authService;
     private final JwtService jwtService;
+    private final UserService userService;
 
     @Value("${jwt.expiration}")
     private long jwtExpirationMs;
 
     // Dependency Injection via Constructor
-    public AuthController(AuthService authService, JwtService jwtService) {
+    public AuthController(AuthService authService,
+                          JwtService jwtService,
+                          UserService userService) {
         this.authService = authService;
         this.jwtService = jwtService;
+        this.userService = userService;
     }
 
     /**
@@ -83,6 +84,16 @@ public class AuthController {
         String username = authentication.getName();
         authService.logout(username);
         return ResponseEntity.ok(Map.of("message", "User " + username + " logged out successfully"));
+    }
+
+    /**
+     * DELETE /api/auth/delete-account
+     */
+    @DeleteMapping("/delete-account")
+    public ResponseEntity<Map<String, String>> deleteAccount(Authentication authentication) {
+        String username = authentication.getName();
+        userService.deleteAccount(username);
+        return ResponseEntity.ok(Map.of("message", "Account has been deleted successfully."));
     }
 
     // TODO [28.12.2025]: E-Mail des Users validieren

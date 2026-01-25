@@ -80,4 +80,9 @@ public class UserService implements UserDetailsService {
                 ))
                 .toList();
     }
+
+    public void deleteAccount(String username) {
+        UserEntity user = findUserByName(username);
+        deleteUserById(user.getId());
+    }
 }

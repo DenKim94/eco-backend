@@ -28,4 +28,6 @@ public interface TrackingRepository extends JpaRepository<TrackingEntity, Long> 
     // Eintrag über Datum (Timestamp) finden
     Optional<TrackingEntity> findByUserIdAndTimestamp(Long userId, LocalDateTime timestamp);
 
+    // Löscht alle Einträge einer bestimmten User-ID
+    void deleteByUserId(Long userId);
 }

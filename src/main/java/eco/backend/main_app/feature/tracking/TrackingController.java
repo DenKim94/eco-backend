@@ -39,18 +39,24 @@ public class TrackingController {
     }
 
     @PostMapping("/add")
-    public ResponseEntity<TrackingEntity> add(@AuthenticationPrincipal UserDetails user, @RequestBody TrackingDto dto) {
+    public ResponseEntity<TrackingEntity> addEntry(@AuthenticationPrincipal UserDetails user, @RequestBody TrackingDto dto) {
         return ResponseEntity.ok(service.addEntry(user.getUsername(), dto));
     }
 
     @DeleteMapping("/{id}/delete")
-    public ResponseEntity<Map<String, String>> delete(@AuthenticationPrincipal UserDetails user, @PathVariable("id") Long id) {
+    public ResponseEntity<Map<String, String>> deleteEntry(@AuthenticationPrincipal UserDetails user, @PathVariable("id") Long id) {
         service.deleteEntryById(user.getUsername(), id);
         return ResponseEntity.ok(Map.of("message", "Entry has been removed successfully."));
     }
 
+    @DeleteMapping("/delete-all")
+    public ResponseEntity<Map<String, String>> deleteAllEntries(@AuthenticationPrincipal UserDetails user){
+        service.deleteAllEntries(user.getUsername());
+        return ResponseEntity.ok(Map.of("message", "All tracked entries have been removed successfully."));
+    }
+
     @PutMapping("/{id}/update")
-    public ResponseEntity<TrackingEntity> update(@AuthenticationPrincipal UserDetails user, @PathVariable Long id, @RequestBody TrackingDto dto) {
+    public ResponseEntity<TrackingEntity> updateEntry(@AuthenticationPrincipal UserDetails user, @PathVariable Long id, @RequestBody TrackingDto dto) {
         return ResponseEntity.ok(service.updateEntryById(user.getUsername(), id, dto));
     }
 }

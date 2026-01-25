@@ -3,6 +3,9 @@ package eco.backend.main_app.feature.tracking;
 import eco.backend.main_app.core.exception.GenericException;
 import eco.backend.main_app.feature.auth.UserService;
 import eco.backend.main_app.feature.auth.model.UserEntity;
+import eco.backend.main_app.feature.configuration.ConfigRepository;
+import eco.backend.main_app.feature.configuration.ConfigService;
+import eco.backend.main_app.feature.configuration.model.ConfigEntity;
 import eco.backend.main_app.feature.tracking.dto.TrackingDto;
 import eco.backend.main_app.feature.tracking.model.TrackingEntity;
 import eco.backend.main_app.utils.ReuseHelper;
@@ -19,10 +22,18 @@ public class TrackingService {
 
     private final TrackingRepository repository;
     private final UserService userService;
+    private final ConfigService configService;
+    private final ConfigRepository configRepository;
 
-    public TrackingService(TrackingRepository repository, UserService userService) {
+    public TrackingService(TrackingRepository repository,
+                           UserService userService,
+                           ConfigService configService,
+                           ConfigRepository configRepository) {
+
         this.repository = repository;
         this.userService = userService;
+        this.configService = configService;
+        this.configRepository = configRepository;
     }
 
     /** Alle getrackten Daten des Users laden */
@@ -36,6 +47,18 @@ public class TrackingService {
     public TrackingEntity addEntry(String username, TrackingDto dto) {
 
         UserEntity user = userService.findUserByName(username);
+        ConfigEntity config = configService.getConfigByUsername(username);
+
+        // CHECK: Referenzdatum setzen, falls noch nicht gesetzt
+        if (config.getReferenceDate() == null) {
+            LocalDateTime entryDate = ReuseHelper.getParsedDateTime(dto.date());
+
+            // Default setzen: Startdatum des Trackings = Referenzdatum
+            config.setReferenceDate(entryDate);
+
+            // WICHTIG: Config speichern!
+            configRepository.save(config);
+        }
 
         TrackingEntity entity = new TrackingEntity();
         entity.setUser(user);
@@ -199,4 +222,27 @@ public class TrackingService {
 
         return (predecessorCheck && successorCheck)? Optional.empty() : Optional.of("Update failed: Provided entry has invalid values.");
     }
+
+    /**
+     * Löscht alle Einträge einer bestimmten User-ID und
+     * setzt das Referenzdatum in der Config zurück
+     *
+     * @param username Der Name des validierten Users
+     */
+    @Transactional
+    public void deleteAllEntries(String username) {
+        // User laden
+        UserEntity user = userService.findUserByName(username);
+
+        // Löschen aller Einträge, die diesem User gehören
+        repository.deleteByUserId(user.getId());
+
+        // Referenzdatum in der Config zurücksetzen (falls gewünscht)
+        ConfigEntity config = configService.getConfigByUsername(username);
+        if (config.getReferenceDate() != null) {
+            config.setReferenceDate(null);
+            configRepository.save(config);
+        }
+    }
+
 }
