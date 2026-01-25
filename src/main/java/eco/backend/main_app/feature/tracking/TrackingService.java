@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -245,4 +246,17 @@ public class TrackingService {
         }
     }
 
+    /**
+     * Hilfsfunktion, um einen Eintrag anhand eines Datums in TrackingEntity zu finden.
+     *
+     * @param trackedData Getrackten Daten als Liste
+     * @param date Zieldatum
+     */
+    public TrackingEntity findEntryByDate(List<TrackingEntity> trackedData, LocalDate date){
+
+        return trackedData.stream()
+                .filter(e -> e.getTimestamp().toLocalDate().isEqual(date))
+                .findFirst()
+                .orElseThrow(() -> new GenericException("No entry found for the given date.", HttpStatus.BAD_REQUEST));
+    }
 }

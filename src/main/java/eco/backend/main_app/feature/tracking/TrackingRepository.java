@@ -14,6 +14,11 @@ public interface TrackingRepository extends JpaRepository<TrackingEntity, Long> 
     // Alle Ablesungen eines Users finden, sortiert nach Datum (ältester Eintrag zuerst)
     List<TrackingEntity> findByUserIdOrderByTimestampAsc(Long userId);
 
+    // Finde alle Einträge eines Users innerhalb eines Zeitraums (Start bis Ende),
+    // sortiert vom neuesten zum ältesten Eintrag.
+    List<TrackingEntity> findByUserIdAndTimestampBetweenOrderByTimestampDesc(
+            Long userId, LocalDateTime start, LocalDateTime end);
+
     // Finde den neuesten Eintrag
     Optional<TrackingEntity> findFirstByUserIdOrderByTimestampDesc(Long userId);
 
@@ -27,6 +32,11 @@ public interface TrackingRepository extends JpaRepository<TrackingEntity, Long> 
 
     // Eintrag über Datum (Timestamp) finden
     Optional<TrackingEntity> findByUserIdAndTimestamp(Long userId, LocalDateTime timestamp);
+
+    // Finde den (ersten) Eintrag eines Users an einem bestimmten Tag
+    Optional<TrackingEntity> findFirstByUserIdAndTimestampBetween(
+            Long userId, LocalDateTime start, LocalDateTime end
+    );
 
     // Löscht alle Einträge einer bestimmten User-ID
     void deleteByUserId(Long userId);

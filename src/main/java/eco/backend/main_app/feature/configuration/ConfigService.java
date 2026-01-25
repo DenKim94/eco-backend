@@ -8,11 +8,14 @@ import eco.backend.main_app.feature.configuration.model.ConfigEntity;
 import eco.backend.main_app.core.event.UserRegisteredEvent;
 import eco.backend.main_app.feature.tracking.TrackingRepository;
 import eco.backend.main_app.feature.tracking.model.TrackingEntity;
+import eco.backend.main_app.utils.ReuseHelper;
 import org.springframework.context.event.EventListener;
 import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 
 @Service
@@ -82,11 +85,14 @@ public class ConfigService {
         if (dto.meterIdentifier() != null && !dto.meterIdentifier().isBlank()) config.setMeterIdentifier(dto.meterIdentifier());
 
         if (dto.referenceDate() != null && !dto.referenceDate().isBlank()){
+            LocalDateTime timestamp = ReuseHelper.getParsedDateTimeNoFallback(dto.referenceDate());
             UserEntity user = userService.findUserByName(username);
-            LocalDateTime timestamp = LocalDateTime.parse(dto.referenceDate());
 
-            TrackingEntity foundEntry = trackingRepository.findByUserIdAndTimestamp(user.getId(), timestamp)
-                    .orElseThrow(() -> new GenericException("Update failed: Provided reference date is not existing in database." , HttpStatus.NOT_FOUND));
+            LocalDateTime start = timestamp.toLocalDate().atStartOfDay();
+            LocalDateTime end = timestamp.toLocalDate().atTime(LocalTime.MAX);
+
+            TrackingEntity foundEntry = trackingRepository.findFirstByUserIdAndTimestampBetween(user.getId(), start, end)
+                    .orElseThrow(() -> new GenericException("No entry found for the given reference date.", HttpStatus.BAD_REQUEST));
 
             config.setReferenceDate(foundEntry.getTimestamp());
         }
