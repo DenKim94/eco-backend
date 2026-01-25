@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import eco.backend.main_app.feature.auth.model.UserEntity;
 import jakarta.persistence.*;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "configs")
 public class ConfigEntity {
@@ -40,6 +42,9 @@ public class ConfigEntity {
     @Column(name = "meter_identifier", nullable = false)
     private String meterIdentifier = "EMPTY-METER-ID"; // Zählernummer
 
+    @Column(name = "reference_date")
+    private LocalDateTime referenceDate = null;       // Referenzdatum für den Start der Abrechnung
+
     // Verknüpfung zum User (LAZY: Userdaten werden erst dann geladen, wenn diese benötigt werden)
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false, unique = true)
@@ -69,4 +74,6 @@ public class ConfigEntity {
     public Integer getSepaProcessingDays(){ return this.sepaProcessingDays; }
     public void setMeterIdentifier(String meterIdentifier){ this.meterIdentifier = meterIdentifier; }
     public String getMeterIdentifier(){ return this.meterIdentifier; }
+    public void setReferenceDate(LocalDateTime referenceDate){ this.referenceDate = referenceDate; }
+    public LocalDateTime getReferenceDate(){ return this.referenceDate; }
 }

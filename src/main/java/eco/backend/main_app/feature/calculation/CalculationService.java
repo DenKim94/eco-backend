@@ -51,6 +51,9 @@ public class CalculationService {
     public CalculationResultsDto runCalculation(String username, CalculationRequestDto requestDto) {
         UserEntity user = userService.findUserByName(username);
 
+        // User-Konfiguration laden
+        ConfigEntity configData = configService.getConfigByUsername(user.getUsername());
+
         // Lokale Parameter
         TrackingEntity currentEntry;
         TrackingEntity prevEntry;
@@ -58,12 +61,9 @@ public class CalculationService {
         int DAYS_IN_YEAR = 365;
         int MONTHS_IN_YEAR = 12;
 
-        // Datumsangaben parsen
-        LocalDateTime startDate = ReuseHelper.getParsedDateTimeNoFallback(requestDto.startDate()); // TODO: Das Datum muss aus Configs entnommen werden --> Referenzdatum
+        // Referenzdatum aus Configs & Datumsangaben parsen
+        LocalDateTime startDate = configData.getReferenceDate();
         LocalDateTime endDate = ReuseHelper.getParsedDateTimeNoFallback(requestDto.endDate());
-
-        // User-Konfiguration laden
-        ConfigEntity configData = configService.getConfigByUsername(user.getUsername());
 
         // Getrackte Daten laden (absteigend sortiert: neuester Eintrag zuerst)
         List<TrackingEntity> trackedData = trackingRepository.findByUserIdOrderByTimestampDesc(user.getId());

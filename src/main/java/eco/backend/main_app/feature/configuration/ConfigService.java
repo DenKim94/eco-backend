@@ -6,19 +6,28 @@ import eco.backend.main_app.feature.auth.model.UserEntity;
 import eco.backend.main_app.feature.configuration.dto.ConfigDto;
 import eco.backend.main_app.feature.configuration.model.ConfigEntity;
 import eco.backend.main_app.core.event.UserRegisteredEvent;
+import eco.backend.main_app.feature.tracking.TrackingRepository;
+import eco.backend.main_app.feature.tracking.model.TrackingEntity;
 import org.springframework.context.event.EventListener;
 import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import java.time.LocalDateTime;
+
 
 @Service
 public class ConfigService {
     private final ConfigRepository configRepository;
     private final UserService userService;
+    private final TrackingRepository trackingRepository;
 
-    public ConfigService(ConfigRepository configRepository, UserService userService) {
+    public ConfigService(ConfigRepository configRepository,
+                         UserService userService,
+                         TrackingRepository trackingRepository) {
+
         this.configRepository = configRepository;
         this.userService = userService;
+        this.trackingRepository = trackingRepository;
     }
 
     /**
@@ -70,7 +79,17 @@ public class ConfigService {
         if (dto.dueDate() != null) config.setDueDay(dto.dueDate());
         if (dto.sepaProcessingDays() != null) config.setSepaProcessingDays(dto.sepaProcessingDays());
         if (dto.additionalCredit() != null) config.setAdditionalCredit(dto.additionalCredit());
-        if (dto.meterIdentifier() != null) config.setMeterIdentifier(dto.meterIdentifier());
+        if (dto.meterIdentifier() != null && !dto.meterIdentifier().isBlank()) config.setMeterIdentifier(dto.meterIdentifier());
+
+        if (dto.referenceDate() != null && !dto.referenceDate().isBlank()){
+            UserEntity user = userService.findUserByName(username);
+            LocalDateTime timestamp = LocalDateTime.parse(dto.referenceDate());
+
+            TrackingEntity foundEntry = trackingRepository.findByUserIdAndTimestamp(user.getId(), timestamp)
+                    .orElseThrow(() -> new GenericException("Update failed: Provided reference date is not existing in database." , HttpStatus.NOT_FOUND));
+
+            config.setReferenceDate(foundEntry.getTimestamp());
+        }
 
         // Speichern der Änderungen
         return configRepository.save(config);

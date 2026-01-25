@@ -8,7 +8,8 @@ INSERT INTO configs (
     additional_credit,      -- Guthaben in EUR
     due_day,                -- Abrechnungstag im Monat  (z.B. 5: Zum 5. des Monats)
     sepa_processing_days,    -- Anzahl der Tage für die Lastschriftankündigung (SEPA)
-    meter_identifier        -- Zählernummer
+    meter_identifier,        -- Zählernummer
+    reference_date          -- Referenzdatum für den Start der Abrechnung
 )
 
 SELECT
@@ -21,7 +22,8 @@ SELECT
     0.00,               -- additional_credit
     5,                  -- due_day
     15,                 -- sepa_processing_days
-    'EMPTY-METER-ID'    -- meter_identifier
+    'EMPTY-METER-ID',   -- meter_identifier
+    NULL                -- reference_date
 
 FROM users
 WHERE username = 'admin'

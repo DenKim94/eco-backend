@@ -36,6 +36,7 @@ CREATE TABLE configs (
     due_day                 INTEGER NOT NULL,   -- Abrechnungstag im Monat (z.B. 5: Zum 5. des Monats)
     sepa_processing_days    INTEGER NOT NULL,   -- Anzahl der Tage für die Lastschriftankündigung (SEPA)
     meter_identifier        TEXT NOT NULL,      -- Zählernummer
+    reference_date          TIMESTAMP,      -- Referenzdatum für den Start der Abrechnung
     user_id                 INTEGER NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
