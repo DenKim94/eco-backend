@@ -9,6 +9,7 @@ import eco.backend.main_app.feature.calculation.model.CalculationEntity;
 import eco.backend.main_app.feature.configuration.ConfigService;
 import eco.backend.main_app.feature.configuration.model.ConfigEntity;
 import eco.backend.main_app.feature.tracking.TrackingRepository;
+import eco.backend.main_app.feature.tracking.TrackingService;
 import eco.backend.main_app.feature.tracking.model.TrackingEntity;
 import eco.backend.main_app.utils.AppConstants;
 import eco.backend.main_app.utils.ReuseHelper;
@@ -27,16 +28,19 @@ public class CalculationService {
     private final TrackingRepository trackingRepository;
     private final UserService userService;
     private final ConfigService configService;
+    private final TrackingService trackingService;
     private final CalculationRepository calculationRepository;
 
     public CalculationService(TrackingRepository trackingRepository,
                               UserService userService,
                               ConfigService configService,
+                              TrackingService trackingService,
                               CalculationRepository calculationRepository) {
 
         this.trackingRepository = trackingRepository;
         this.userService = userService;
         this.configService = configService;
+        this.trackingService = trackingService;
         this.calculationRepository = calculationRepository;
     }
 
@@ -66,7 +70,9 @@ public class CalculationService {
         LocalDateTime endDate = ReuseHelper.getParsedDateTimeNoFallback(requestDto.endDate());
 
         // Getrackte Daten laden (absteigend sortiert: neuester Eintrag zuerst)
-        List<TrackingEntity> trackedData = trackingRepository.findByUserIdOrderByTimestampDesc(user.getId());
+        List<TrackingEntity> trackedData = (startDate == null || endDate == null) ?
+                trackingRepository.findByUserIdOrderByTimestampDesc(user.getId()) :
+                trackingRepository.findByUserIdAndTimestampBetweenOrderByTimestampDesc(user.getId(), startDate, endDate);
 
         // Validierung der Mindestanzahl an Datenpunkten
         if (trackedData.size() < AppConstants.MIN_DATA_POINTS) {
@@ -74,8 +80,9 @@ public class CalculationService {
         }
 
         // Die gewünschten Einträge anhand des Datums finden, sonst Fallback auf den neuesten und ältesten Eintrag
-        prevEntry = (startDate == null) ? trackedData.getLast() : findEntryByDate(trackedData, startDate.toLocalDate());
-        currentEntry = (endDate == null) ? trackedData.getFirst() : findEntryByDate(trackedData, endDate.toLocalDate());
+        prevEntry = (startDate == null) ? trackedData.getLast() : trackingService.findEntryByDate(trackedData, startDate.toLocalDate());
+        currentEntry = (endDate == null) ? trackedData.getFirst() : trackingService.findEntryByDate(trackedData, endDate.toLocalDate());
+
 
         // Prüfung des Datums
         if (!validDates(prevEntry.getTimestamp(), currentEntry.getTimestamp())) {
@@ -86,14 +93,12 @@ public class CalculationService {
         long daysBetween = ChronoUnit.DAYS.between(prevEntry.getTimestamp().toLocalDate(), currentEntry.getTimestamp().toLocalDate());
 
         // ***** Berechnungslogik *****
+        // Differenz der getrackten Werte bzw. verbrauchte Energiemenge [kWh]
         double diffTrackedValues = currentEntry.getReadingValue() - prevEntry.getReadingValue();
 
-        ExpectedAmountMonthsResult amountPeriod = getExpectedAmountPeriod(prevEntry.getTimestamp().toLocalDate(),
-                                                                            currentEntry.getTimestamp().toLocalDate(),
-                                                                            configData.getDueDay(),
-                                                                            configData.getSepaProcessingDays());
+        SkippedMonthsResults skippedMonths = estimateSkippedMonths(prevEntry.getTimestamp().toLocalDate(), configData.getDueDay(), configData.getSepaProcessingDays());
 
-        if (amountPeriod.message != null) { logMessage = amountPeriod.message; }
+        if (skippedMonths.message != null) { logMessage = skippedMonths.message; }
 
         // Normierter Verbrauch pro Tag [kWh/Tag]
         double normConsumptionPerDay = diffTrackedValues / daysBetween;
@@ -120,7 +125,7 @@ public class CalculationService {
         double bruttoTotalCostPeriod = netTotalCostPeriod * (1 + configData.getVatRate());
 
         // Gezahlten Abschläge im betrachteten Abrechnungszeitraum
-        double paidAmountPeriod = configData.getMonthlyAdvance() * amountPeriod.expectedMonths/DAYS_IN_YEAR * daysBetween;
+        double paidAmountPeriod = configData.getMonthlyAdvance() * (MONTHS_IN_YEAR - skippedMonths.value)/DAYS_IN_YEAR * daysBetween;
 
         // Brutto Restbetrag berechnen [€]
         double costDiffPeriod = (paidAmountPeriod - bruttoTotalCostPeriod) + configData.getAdditionalCredit();
@@ -148,20 +153,6 @@ public class CalculationService {
      */
     private boolean validDates(LocalDateTime startDate, LocalDateTime endDate){
         return startDate.isBefore(endDate);
-    }
-
-    /**
-     * Hilfsfunktion, um einen Eintrag anhand eines Datums in TrackingEntity zu finden.
-     *
-     * @param trackedData Getrackten Daten als Liste
-     * @param date Zieldatum
-     */
-    private TrackingEntity findEntryByDate(List<TrackingEntity> trackedData, LocalDate date){
-
-        return trackedData.stream()
-                .filter(e -> e.getTimestamp().toLocalDate().isEqual(date))
-                .findFirst()
-                .orElseThrow(() -> new GenericException("No entry found for the given date.", HttpStatus.BAD_REQUEST));
     }
 
     /**
@@ -216,47 +207,44 @@ public class CalculationService {
     }
 
     /**
-     * Hilfsfunktion berechnet die voraussichtliche Anzahl der Abrechnungsmonate
+     * Hilfsfunktion berechnet die voraussichtliche Anzahl der übersprungenen Abrechnungsmonate
      * anhand der übergebenen Parameter
      *
      * @param startDate Startdatum des Abrechnungszeitraums
-     * @param endDate Enddatum des Abrechnungszeitraums
      * @param dueDay Abbuchungstag im Monat
      * @param sepaProcessingDays Anzahl der Tage für die Lastschriftankündigung (SEPA)
      *
-     * @return ExpectedAmountMonthsResult: record (int expectedMonths, String message)
+     * @return SkippedMonthsResults: record (int value, String message)
      */
-    private ExpectedAmountMonthsResult getExpectedAmountPeriod(LocalDate startDate, LocalDate endDate,
-                                                              Integer dueDay, Integer sepaProcessingDays) {
-        int expectedMonths = 0;
+    private SkippedMonthsResults estimateSkippedMonths(LocalDate startDate, Integer dueDay, Integer sepaProcessingDays) {
+
+        int skippedMonths = 0; // Zähler für übersprungene Monate
         String message = null;
 
-        // Finde den ERSTEN möglichen Zahltag nach Vertragsbeginn,
-        // wenn Vertrag am 22.07. startet, ist der dueDay (z.B. 05.07.) vorbei,
-        // d.h. der 05.08. ist theoretisch der erste Abrechnungsmonat.
-        LocalDate firstDue = startDate.withDayOfMonth(dueDay);
-        if (firstDue.isBefore(startDate)) {
-            firstDue = firstDue.plusMonths(1);
-            message = "Installment months were skipped.";
+        // Basis-Startpunkt finden
+        LocalDate currentDue = startDate.withDayOfMonth(dueDay);
+
+        // Wenn der Stichtag im Startmonat schon vorbei ist (z.B. Start 22.07., Due 05.),
+        // muss es logisch eh erst im nächsten Monat weitergehen.
+        // Das zählt technisch oft noch nicht als "ausgesetzt", sondern einfach als "Kalender-Logik".
+        // Wenn du das aber als "Skipped" zählen willst, mach hier value++
+        if (currentDue.isBefore(startDate)) {
+            currentDue = currentDue.plusMonths(1);
         }
 
-        // Realitätsnahe Optimierung/Annahme:
-        // Viele Versorger brauchen mind. 14 Tage Vorlauf für SEPA.
-        // Wenn z.B. Start=22.07. und dueDay=05.08. (nur 14 Tage), wird das oft übersprungen!
-        if (ChronoUnit.DAYS.between(startDate, firstDue) <= sepaProcessingDays) {
-            firstDue = firstDue.plusMonths(1);
-            message = "Installment months were skipped.";
+        // SEPA-Check (Business-Logik)
+        // Wenn der erste theoretische Termin zu nah am Startdatum liegt -> Überspringen
+        if (ChronoUnit.DAYS.between(startDate, currentDue) <= sepaProcessingDays) {
+            skippedMonths++;
         }
 
-        while (!firstDue.isAfter(endDate)) {
-            expectedMonths++;
-            firstDue = firstDue.plusMonths(1);
+        // Message ausgeben
+        if (skippedMonths > 0) {
+            message = " " + skippedMonths + " installment month(s) were skipped due to SEPA processing time.";
         }
 
-        if(message != null){ message = message + " Expected billing months: " + expectedMonths; }
-
-        return new ExpectedAmountMonthsResult(expectedMonths, message);
+        return new SkippedMonthsResults(skippedMonths, message);
     }
 
-    private record ExpectedAmountMonthsResult(int expectedMonths, String message) {}
+    private record SkippedMonthsResults(int value, String message) {}
 }
