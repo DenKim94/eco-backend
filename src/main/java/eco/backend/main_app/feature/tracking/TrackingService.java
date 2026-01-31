@@ -238,7 +238,7 @@ public class TrackingService {
         // Löschen aller Einträge, die diesem User gehören
         repository.deleteByUserId(user.getId());
 
-        // Referenzdatum in der Config zurücksetzen (falls gewünscht)
+        // Referenzdatum in der Config zurücksetzen
         ConfigEntity config = configService.getConfigByUsername(username);
         if (config.getReferenceDate() != null) {
             config.setReferenceDate(null);

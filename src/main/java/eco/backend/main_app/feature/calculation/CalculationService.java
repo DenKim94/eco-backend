@@ -65,11 +65,11 @@ public class CalculationService {
         int DAYS_IN_YEAR = 365;
         int MONTHS_IN_YEAR = 12;
 
-        // Referenzdatum aus Configs & Datumsangaben parsen
+        // Referenzdatum aus Configs entnehmen & End-Datum parsen
         LocalDateTime startDate = configData.getReferenceDate();
         LocalDateTime endDate = ReuseHelper.getParsedDateTimeNoFallback(requestDto.endDate());
 
-        // Getrackte Daten laden (absteigend sortiert: neuester Eintrag zuerst)
+        // Getrackte Daten für den Zeitraum laden, sonst Fallback auf alle Daten (absteigend sortiert: neuester Eintrag zuerst)
         List<TrackingEntity> trackedData = (startDate == null || endDate == null) ?
                 trackingRepository.findByUserIdOrderByTimestampDesc(user.getId()) :
                 trackingRepository.findByUserIdAndTimestampBetweenOrderByTimestampDesc(user.getId(), startDate, endDate);
@@ -79,7 +79,7 @@ public class CalculationService {
             throw new GenericException("Not enough data points. At least " + AppConstants.MIN_DATA_POINTS + " are required.", HttpStatus.BAD_REQUEST);
         }
 
-        // Die gewünschten Einträge anhand des Datums finden, sonst Fallback auf den neuesten und ältesten Eintrag
+        // Die gewünschten Einträge anhand des Datums finden, sonst Fallback auf den neuesten (currentEntry) und ältesten (prevEntry) Eintrag
         prevEntry = (startDate == null) ? trackedData.getLast() : trackingService.findEntryByDate(trackedData, startDate.toLocalDate());
         currentEntry = (endDate == null) ? trackedData.getFirst() : trackingService.findEntryByDate(trackedData, endDate.toLocalDate());
 
@@ -247,4 +247,10 @@ public class CalculationService {
     }
 
     private record SkippedMonthsResults(int value, String message) {}
+
+    /** Hilfsfunktion löscht alle Berechnungsergebnisse des Users */
+    public void deleteAllEntries(String username) {
+        UserEntity user = userService.findUserByName(username);
+        calculationRepository.deleteByUserId(user.getId());
+    }
 }

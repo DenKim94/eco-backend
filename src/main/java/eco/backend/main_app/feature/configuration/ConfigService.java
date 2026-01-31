@@ -84,6 +84,7 @@ public class ConfigService {
         if (dto.additionalCredit() != null) config.setAdditionalCredit(dto.additionalCredit());
         if (dto.meterIdentifier() != null && !dto.meterIdentifier().isBlank()) config.setMeterIdentifier(dto.meterIdentifier());
 
+        // Referenzdatum für die Berechnung aktualisieren
         if (dto.referenceDate() != null && !dto.referenceDate().isBlank()){
             LocalDateTime timestamp = ReuseHelper.getParsedDateTimeNoFallback(dto.referenceDate());
             UserEntity user = userService.findUserByName(username);
@@ -91,6 +92,7 @@ public class ConfigService {
             LocalDateTime start = timestamp.toLocalDate().atStartOfDay();
             LocalDateTime end = timestamp.toLocalDate().atTime(LocalTime.MAX);
 
+            // Prüfen, ob ein Eintrag für das Referenzdatum existiert
             TrackingEntity foundEntry = trackingRepository.findFirstByUserIdAndTimestampBetween(user.getId(), start, end)
                     .orElseThrow(() -> new GenericException("No entry found for the given reference date.", HttpStatus.BAD_REQUEST));
 
