@@ -17,4 +17,7 @@ public interface CalculationRepository extends JpaRepository<CalculationEntity, 
 
     // Optional; Suche nach exaktem Eintrag (User + End-Zeitpunkt)
     Optional<CalculationEntity> findByUserIdAndPeriodEnd(Long userId, LocalDateTime periodEnd);
+
+    // Löscht alle Einträge einer bestimmten User-ID
+    void deleteByUserId(Long userId);
 }

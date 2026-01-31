@@ -11,6 +11,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 
 @RestController
@@ -48,6 +49,15 @@ public class CalculationController {
         }
 
         return ResponseEntity.ok(history);
+    }
+
+    /**
+     * DELETE /api/calculation/delete-all: Löscht alle gespeicherten Berechnungen
+     */
+    @DeleteMapping("/delete-all")
+    public ResponseEntity<Map<String, String>> deleteAllEntries(@AuthenticationPrincipal UserDetails user){
+        calculationService.deleteAllEntries(user.getUsername());
+        return ResponseEntity.ok(Map.of("message", "All tracked entries have been removed successfully."));
     }
 }
 
