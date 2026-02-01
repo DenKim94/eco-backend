@@ -26,9 +26,10 @@ public class EmailService {
      * Sendet eine E-Mail über den konfigurierten SMTP Server.
      */
     @Async
-    public void sendVerificationEmail(String toEmail, String tfaCode) {
+    public void sendVerificationEmail(String toEmail, String tfaCode, String text) {
         try {
-            SimpleMailMessage message = getSimpleMailMessage(toEmail, tfaCode);
+            logger.debug("Sending E-Mail to {} ...", toEmail);
+            SimpleMailMessage message = getSimpleMailMessage(toEmail, tfaCode, text);
 
             mailSender.send(message);
             logger.debug("E-Mail to {} has been sent.", toEmail);
@@ -38,25 +39,14 @@ public class EmailService {
         }
     }
 
-    private SimpleMailMessage getSimpleMailMessage(String toEmail, String tfaCode) {
+    private SimpleMailMessage getSimpleMailMessage(String toEmail, String tfaCode, String text) {
         SimpleMailMessage message = new SimpleMailMessage();
 
         message.setFrom(senderAddress);
         message.setTo(toEmail);
         message.setSubject("ECO-App: Dein Verifizierungscode");
+        message.setText(text.formatted(tfaCode));
 
-        String text = """
-            Hallo und willkommen!
-            
-            Dein Verifizierungscode lautet: %s
-            
-            Bitte gib diesen Code in der App ein, um deine E-Mail zu bestätigen.
-            
-            
-            Beste Grüße.
-            """.formatted(tfaCode);
-
-        message.setText(text);
         return message;
     }
 }

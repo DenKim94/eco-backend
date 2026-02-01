@@ -7,7 +7,25 @@ public class AppConstants {
     public static final String DB_DATE_PATTERN = "yyyy-MM-dd HH:mm:ss";
     public static final DateTimeFormatter JSON_DATE_FORMATTER = DateTimeFormatter.ofPattern(JSON_DATE_PATTERN);
 
-    /** Mindestanzahl an Datenpunkten, die für die Berechnung notwendig sind */
-    public static final int MIN_DATA_POINTS = 2;
+    public static final String TEXT_VERIFY_EMAIL = """
+            Hallo und willkommen!
+            
+            Dein Verifizierungscode lautet: %s
+            
+            Bitte gib diesen Code in der App ein, um deine E-Mail zu bestätigen.
+            
+            
+            Beste Grüße.
+            """;
 
+    public static final String TEXT_RESET_PASSWORD = """
+            Hallo!
+            
+            Dein Verifizierungscode lautet: %s
+            
+            Bitte gib diesen Code in der App ein, um dein Passwort zurücksetzen zu können.
+            
+            
+            Beste Grüße.
+            """;
 }

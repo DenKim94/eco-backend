@@ -43,6 +43,9 @@ public class ConfigService {
      */
     public ConfigEntity getConfigByUsername(String username) {
         UserEntity user = userService.findUserByName(username);
+        if(!userService.hasValidStatus(userService.findUserByName(username))){
+            throw new GenericException("Invalid user status.", HttpStatus.FORBIDDEN);
+        }
 
         return configRepository.findByUserId(user.getId())
                 .orElseThrow(() ->  new GenericException(

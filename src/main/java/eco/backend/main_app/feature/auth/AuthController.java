@@ -2,10 +2,9 @@ package eco.backend.main_app.feature.auth;
 
 import eco.backend.main_app.core.exception.GenericException;
 import eco.backend.main_app.core.security.JwtService;
-import eco.backend.main_app.feature.auth.dto.EmailRequest;
 import eco.backend.main_app.feature.auth.dto.LoginRequest;
 import eco.backend.main_app.feature.auth.dto.RegisterRequest;
-import eco.backend.main_app.feature.auth.dto.VerificationRequestDto;
+import eco.backend.main_app.feature.auth.dto.VerificationRequest;
 import eco.backend.main_app.feature.auth.model.UserEntity;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -106,7 +105,7 @@ public class AuthController {
      */
     @PostMapping("/verify-email")
     public ResponseEntity<Map<String, String>> verifyEmail(@AuthenticationPrincipal UserDetails userDetails,
-                                                           @RequestBody VerificationRequestDto dto) {
+                                                           @RequestBody VerificationRequest dto) {
 
         authService.verifyEmailCode(userDetails.getUsername(), dto);
         return ResponseEntity.ok(Map.of("message", "Email verified successfully."));
@@ -123,5 +122,7 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("message", "Email verification code has been resent successfully."));
     }
 
-    // TODO [28.12.2025]: Zurücksetzen des Passworts über eine PIN, die über die hinterlegte e-Mail an den User gesendet wird
+    // TODO [01.02.2026]: Methode, um TFA-Code zum Passwort-Update via Mail an den User zu senden
+
+    // TODO [01.02.2026]: Methode, um neues Passwort über gültigen TFA-Code zu setzen/speichern
 }

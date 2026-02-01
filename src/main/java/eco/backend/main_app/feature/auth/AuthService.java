@@ -3,7 +3,9 @@ package eco.backend.main_app.feature.auth;
 import eco.backend.main_app.core.exception.GenericException;
 import eco.backend.main_app.feature.auth.dto.LoginRequest;
 import eco.backend.main_app.feature.auth.dto.RegisterRequest;
-import eco.backend.main_app.feature.auth.dto.VerificationRequestDto;
+import eco.backend.main_app.feature.auth.dto.ResetPasswordRequest;
+import eco.backend.main_app.feature.auth.dto.VerificationRequest;
+import eco.backend.main_app.utils.AppConstants;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,7 +17,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import eco.backend.main_app.feature.auth.model.UserEntity;
-import eco.backend.main_app.feature.auth.UserRepository;
 import eco.backend.main_app.core.event.UserRegisteredEvent;
 import org.springframework.context.ApplicationEventPublisher;
 
@@ -52,6 +53,7 @@ public class AuthService {
 
     @Transactional
     public void register(RegisterRequest dto) {
+        logger.debug("Register new user ...");
 
         // 1. Prüfen, ob User bereits existiert
         if (userRepository.existsByUsername(dto.username())) {
@@ -77,7 +79,9 @@ public class AuthService {
             eventPublisher.publishEvent(new UserRegisteredEvent(this, registeredUser));
 
             // 6. E-Mail senden
-            emailService.sendVerificationEmail(dto.email(), tfaCode);
+            emailService.sendVerificationEmail(dto.email(), tfaCode, AppConstants.TEXT_VERIFY_EMAIL);
+
+            logger.debug("New user has been registered.");
         }
         catch( Exception e ){
             logger.error("Failed to register user: {}", e.getMessage());
@@ -144,22 +148,21 @@ public class AuthService {
         userRepository.save(user);
 
         // Mail senden
-        emailService.sendVerificationEmail(user.getEmail(), newCode);
+        emailService.sendVerificationEmail(user.getEmail(), newCode, AppConstants.TEXT_VERIFY_EMAIL);
     }
 
     /**
      * Prüft den vom User eingegebenen Code gegen den in der DB gespeicherten.
      */
     @Transactional
-    public void verifyEmailCode(String username, VerificationRequestDto dto) {
+    public void verifyEmailCode(String username, VerificationRequest dto) {
         UserEntity user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new GenericException("User not found.", HttpStatus.NOT_FOUND));
 
         if(!user.getIsEnabled()){ throw new GenericException("Account is disabled.", HttpStatus.FORBIDDEN); }
 
-        // Code Vergleich (Null-Safe)
-        if (user.getTfaCode() == null || user.getTfaCode().isBlank() || !user.getTfaCode().equals(dto.code())) {
-            logger.error("Invalid code provided.: {}", dto.code());
+        // Code Vergleich
+        if (isInvalidTfaCode(user, dto.code())) {
             throw new GenericException("Invalid code provided.", HttpStatus.BAD_REQUEST);
         }
 
@@ -185,4 +188,45 @@ public class AuthService {
         }
         return code.toString();
     }
+
+    public void resetUserPassword(String username, ResetPasswordRequest dto){
+        logger.debug("Update password of user {} ...", username);
+        UserEntity user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new GenericException("User not found.", HttpStatus.NOT_FOUND));
+
+        if (!user.getIsValidatedEmail() || !user.getIsEnabled()) {
+            throw new GenericException("Invalid user status.", HttpStatus.FORBIDDEN);
+        }
+
+        // Code Vergleich
+        if (isInvalidTfaCode(user, dto.tfaCode())) {
+            throw new GenericException("Invalid code provided.", HttpStatus.BAD_REQUEST);
+        }
+
+        // Code aus Sicherheitsgründen nach Bestätigung neu generieren
+        user.setTfaCode(generateRandomCode());
+
+        // Neues Password setzen und speichern
+        String encodedPassword = passwordEncoder.encode(dto.newPassword());
+        user.setPassword(encodedPassword);
+
+        userRepository.save(user);
+        logger.debug("User password has been updated.");
+    }
+
+    private boolean isInvalidTfaCode(UserEntity user, String tfaCode){
+        boolean isInvalid = false;
+
+        if (user.getTfaCode() == null || user.getTfaCode().isBlank() || !user.getTfaCode().equals(tfaCode)) {
+            logger.error("Invalid code provided.: {}", tfaCode);
+            isInvalid = true;
+        }
+        logger.debug("Provided TFA-Code is valid: {}", !isInvalid);
+
+        return isInvalid;
+    }
+
+    // TODO [01.02.2026]:: Methode, um TFA-Code zum Passwort-Update via Mail an den User zu senden
+
+    // TODO [01.02.2026]:: Methode, Gültigkeitsdauer des User-JWT abzufragen
 }

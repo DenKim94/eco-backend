@@ -74,6 +74,7 @@ public class CalculationService {
         String logMessage = null;
         int DAYS_IN_YEAR = 365;
         int MONTHS_IN_YEAR = 12;
+        int MIN_DATA_POINTS = 2; // Mindestanzahl an Datenpunkten, die für die Berechnung notwendig sind
 
         // Referenzdatum aus Configs entnehmen & End-Datum parsen
         LocalDateTime startDate = configData.getReferenceDate();
@@ -85,14 +86,13 @@ public class CalculationService {
                 trackingRepository.findByUserIdAndTimestampBetweenOrderByTimestampDesc(user.getId(), startDate, endDate);
 
         // Validierung der Mindestanzahl an Datenpunkten
-        if (trackedData.size() < AppConstants.MIN_DATA_POINTS) {
-            throw new GenericException("Not enough data points. At least " + AppConstants.MIN_DATA_POINTS + " are required.", HttpStatus.BAD_REQUEST);
+        if (trackedData.size() < MIN_DATA_POINTS) {
+            throw new GenericException("Not enough data points. At least " + MIN_DATA_POINTS + " are required.", HttpStatus.BAD_REQUEST);
         }
 
         // Die gewünschten Einträge anhand des Datums finden, sonst Fallback auf den neuesten (currentEntry) und ältesten (prevEntry) Eintrag
         prevEntry = (startDate == null) ? trackedData.getLast() : trackingService.findEntryByDate(trackedData, startDate.toLocalDate());
         currentEntry = (endDate == null) ? trackedData.getFirst() : trackingService.findEntryByDate(trackedData, endDate.toLocalDate());
-
 
         // Prüfung des Datums
         if (!validDates(prevEntry.getTimestamp(), currentEntry.getTimestamp())) {
@@ -262,6 +262,7 @@ public class CalculationService {
         if (skippedMonths > 0) {
             message = " " + skippedMonths + " installment month(s) were skipped due to SEPA processing time.";
         }
+        logger.debug(message);
 
         return new SkippedMonthsResults(skippedMonths, message);
     }

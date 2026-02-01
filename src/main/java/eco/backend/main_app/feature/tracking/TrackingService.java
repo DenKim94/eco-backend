@@ -43,6 +43,9 @@ public class TrackingService {
     /** Alle getrackten Daten des Users laden */
     public List<TrackingEntity> getAllEntries(String username) {
         UserEntity user = userService.findUserByName(username);
+        if(!userService.hasValidStatus(user)){
+            throw new GenericException("Invalid user status.", HttpStatus.FORBIDDEN);
+        }
         return repository.findByUserIdOrderByTimestampAsc(user.getId());
     }
 
