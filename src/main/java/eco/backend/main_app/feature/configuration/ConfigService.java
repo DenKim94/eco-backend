@@ -3,12 +3,15 @@ package eco.backend.main_app.feature.configuration;
 import eco.backend.main_app.core.exception.GenericException;
 import eco.backend.main_app.feature.auth.UserService;
 import eco.backend.main_app.feature.auth.model.UserEntity;
+import eco.backend.main_app.feature.calculation.CalculationService;
 import eco.backend.main_app.feature.configuration.dto.ConfigDto;
 import eco.backend.main_app.feature.configuration.model.ConfigEntity;
 import eco.backend.main_app.core.event.UserRegisteredEvent;
 import eco.backend.main_app.feature.tracking.TrackingRepository;
 import eco.backend.main_app.feature.tracking.model.TrackingEntity;
 import eco.backend.main_app.utils.ReuseHelper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
 import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
@@ -23,6 +26,7 @@ public class ConfigService {
     private final ConfigRepository configRepository;
     private final UserService userService;
     private final TrackingRepository trackingRepository;
+    private static final Logger logger = LoggerFactory.getLogger(ConfigService.class);
 
     public ConfigService(ConfigRepository configRepository,
                          UserService userService,
@@ -61,8 +65,7 @@ public class ConfigService {
         // Default Config erstellen und speichern
         ConfigEntity defaultConfig = createDefaultConfig(user);
         configRepository.save(defaultConfig);
-
-        System.out.println("Default-Config for User " + user.getUsername() + " has been created.");
+        logger.debug("Default-Config for User {} has been created.", user.getUsername());
     }
 
     /**
@@ -70,6 +73,11 @@ public class ConfigService {
      */
     @Transactional
     public ConfigEntity updateConfig(String username, ConfigDto dto) {
+        logger.debug("Updating configuration for User {} ...", username);
+
+        if(!userService.hasValidStatus(userService.findUserByName(username))){
+            throw new GenericException("Invalid user status.", HttpStatus.FORBIDDEN);
+        }
 
         ConfigEntity config = getConfigByUsername(username);
 
@@ -98,6 +106,7 @@ public class ConfigService {
 
             config.setReferenceDate(foundEntry.getTimestamp());
         }
+        logger.debug("User configurations have been updated.");
 
         // Speichern der Änderungen
         return configRepository.save(config);

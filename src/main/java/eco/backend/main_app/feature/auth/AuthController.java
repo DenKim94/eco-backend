@@ -2,13 +2,17 @@ package eco.backend.main_app.feature.auth;
 
 import eco.backend.main_app.core.exception.GenericException;
 import eco.backend.main_app.core.security.JwtService;
+import eco.backend.main_app.feature.auth.dto.EmailRequest;
 import eco.backend.main_app.feature.auth.dto.LoginRequest;
 import eco.backend.main_app.feature.auth.dto.RegisterRequest;
+import eco.backend.main_app.feature.auth.dto.VerificationRequestDto;
 import eco.backend.main_app.feature.auth.model.UserEntity;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -40,7 +44,7 @@ public class AuthController {
     public ResponseEntity<Map<String, String>> register(@RequestBody RegisterRequest request) {
         try{
             // 1. Service aufrufen
-            authService.register(request.username(), request.password(), request.email());
+            authService.register(request);
 
             // 2. Erfolgsmeldung zurückgeben
             return ResponseEntity
@@ -93,11 +97,31 @@ public class AuthController {
     public ResponseEntity<Map<String, String>> deleteAccount(Authentication authentication) {
         String username = authentication.getName();
         userService.deleteAccount(username);
-        return ResponseEntity.ok(Map.of("message", "Account has been deleted successfully."));
+        return ResponseEntity.ok(Map.of("message", "Account of " + username + " has been deleted successfully."));
     }
 
-    // TODO [28.12.2025]: E-Mail des Users validieren
-    //  --> E-Mail-Service implementieren/nutzen --> PIN zur Bestätigung der E-Mail durch den User
+    /**
+     * POST /api/auth/verify-email
+     * E-Mail des Users verifizieren
+     */
+    @PostMapping("/verify-email")
+    public ResponseEntity<Map<String, String>> verifyEmail(@AuthenticationPrincipal UserDetails userDetails,
+                                                           @RequestBody VerificationRequestDto dto) {
+
+        authService.verifyEmailCode(userDetails.getUsername(), dto);
+        return ResponseEntity.ok(Map.of("message", "Email verified successfully."));
+    }
+
+    /**
+     * POST /api/auth/resend-email
+     * Einen neuen Bestätigungscode an den User senden
+     */
+    @PostMapping("/resend-email")
+    public ResponseEntity<Map<String, String>> resendEmail(@AuthenticationPrincipal UserDetails userDetails) {
+
+        authService.resendVerificationCode(userDetails.getUsername());
+        return ResponseEntity.ok(Map.of("message", "Email verification code has been resent successfully."));
+    }
 
     // TODO [28.12.2025]: Zurücksetzen des Passworts über eine PIN, die über die hinterlegte e-Mail an den User gesendet wird
 }

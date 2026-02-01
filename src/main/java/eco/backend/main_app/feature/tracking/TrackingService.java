@@ -9,6 +9,8 @@ import eco.backend.main_app.feature.configuration.model.ConfigEntity;
 import eco.backend.main_app.feature.tracking.dto.TrackingDto;
 import eco.backend.main_app.feature.tracking.model.TrackingEntity;
 import eco.backend.main_app.utils.ReuseHelper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +27,7 @@ public class TrackingService {
     private final UserService userService;
     private final ConfigService configService;
     private final ConfigRepository configRepository;
+    private static final Logger logger = LoggerFactory.getLogger(TrackingService.class);
 
     public TrackingService(TrackingRepository repository,
                            UserService userService,
@@ -46,18 +49,23 @@ public class TrackingService {
     /** Eintrag hinzufügen */
     @Transactional
     public TrackingEntity addEntry(String username, TrackingDto dto) {
-
+        logger.debug("Adding new tracking entry...");
         UserEntity user = userService.findUserByName(username);
+
+        if(!userService.hasValidStatus(user)){
+            throw new GenericException("Invalid user status.", HttpStatus.FORBIDDEN);
+        }
+
         ConfigEntity config = configService.getConfigByUsername(username);
 
-        // CHECK: Referenzdatum setzen, falls noch nicht gesetzt
+        // Referenzdatum setzen, falls noch nicht gesetzt
         if (config.getReferenceDate() == null) {
             LocalDateTime entryDate = ReuseHelper.getParsedDateTime(dto.date());
 
             // Default setzen: Startdatum des Trackings = Referenzdatum
             config.setReferenceDate(entryDate);
 
-            // WICHTIG: Config speichern!
+            // Config speichern
             configRepository.save(config);
         }
 
@@ -72,12 +80,17 @@ public class TrackingService {
             throw new GenericException(errorMsg, HttpStatus.BAD_REQUEST);
         });
 
+        logger.debug("New tracking entry added by user: {}", username);
         return repository.save(entity);
     }
 
     /** Letzten neusten Eintrag ausgeben */
     public TrackingEntity getNewestEntry(String username) {
         UserEntity user = userService.findUserByName(username);
+
+        if(!userService.hasValidStatus(user)){
+            throw new GenericException("Invalid user status.", HttpStatus.FORBIDDEN);
+        }
 
         return repository.findFirstByUserIdOrderByTimestampDesc(user.getId())
                 .orElse(null);
@@ -86,7 +99,12 @@ public class TrackingService {
     /** Bestimmten Eintrag anhand der ID entfernen */
     @Transactional
     public void deleteEntryById(String username, Long readingId) {
+        logger.debug("Delete tracking entry with ID: {} ...", readingId);
         UserEntity user = userService.findUserByName(username);
+
+        if(!userService.hasValidStatus(user)){
+            throw new GenericException("Invalid user status.", HttpStatus.FORBIDDEN);
+        }
 
         TrackingEntity foundEntry = getEntryById(readingId);
 
@@ -95,10 +113,12 @@ public class TrackingService {
         }
 
         repository.delete(foundEntry);
+        logger.debug("Tracking entry with ID: {} has been removed.", foundEntry.getId());
     }
 
     /** Hilfsmethode: Eintrag anhand der ID finden */
     private TrackingEntity getEntryById(Long id){
+
         return repository.findById(id)
                 .orElseThrow(() -> new GenericException("Could not find entry.", HttpStatus.BAD_REQUEST));
     }
@@ -106,6 +126,7 @@ public class TrackingService {
     /** Bestimmten Eintrag anhand der ID aktualisieren */
     @Transactional
     public TrackingEntity updateEntryById(String username, Long id, TrackingDto updateDto) {
+        logger.debug("Update tracking entry with ID: {} ...", id);
 
         if (updateDto.date().isBlank() && updateDto.value_kWh() == null){
             throw new GenericException("Update failed: No data provided.", HttpStatus.BAD_REQUEST);
@@ -113,6 +134,10 @@ public class TrackingService {
 
         // Den User laden, der die Anfrage stellt
         UserEntity currentUser = userService.findUserByName(username);
+
+        if(!userService.hasValidStatus(currentUser)){
+            throw new GenericException("Invalid user status.", HttpStatus.FORBIDDEN);
+        }
 
         // Den existierenden Eintrag aus der DB holen
         TrackingEntity entryToUpdate = getEntryById(id);
@@ -137,12 +162,13 @@ public class TrackingService {
         }
         entryToUpdate.setTimestamp(updatedDate);
 
+        logger.debug("Tracking entry with ID: {} updated.", id);
         // Speichern
         return repository.save(entryToUpdate);
     }
 
     /** Hilfsmethode: Validierung des getrackten Eintrags */
-    public Optional<String> isValidTrackingValue(String username, TrackingDto dto) {
+    private Optional<String> isValidTrackingValue(String username, TrackingDto dto) {
 
         // CHECK: Wert darf nicht null oder negativ sein
         if (dto.value_kWh() == null || dto.value_kWh() < 0) {
@@ -182,7 +208,7 @@ public class TrackingService {
      * @param newTimestamp Das neue Datum (vom DTO oder das alte, falls nicht geändert).
      * @return true, wenn das Update gültig ist.
      */
-    public Optional<String> isValidUpdatedDto(TrackingEntity entityToUpdate, Double value_kWh, LocalDateTime newTimestamp) {
+    private Optional<String> isValidUpdatedDto(TrackingEntity entityToUpdate, Double value_kWh, LocalDateTime newTimestamp) {
 
         boolean predecessorCheck = false;
 
@@ -232,8 +258,13 @@ public class TrackingService {
      */
     @Transactional
     public void deleteAllEntries(String username) {
+        logger.debug("Delete all tracked data of user: {} ...", username);
         // User laden
         UserEntity user = userService.findUserByName(username);
+
+        if(!userService.hasValidStatus(user)){
+            throw new GenericException("Invalid user status.", HttpStatus.FORBIDDEN);
+        }
 
         // Löschen aller Einträge, die diesem User gehören
         repository.deleteByUserId(user.getId());
@@ -244,6 +275,8 @@ public class TrackingService {
             config.setReferenceDate(null);
             configRepository.save(config);
         }
+
+        logger.debug("All tracked data of user: {} have been removed.", username);
     }
 
     /**

@@ -1,6 +1,7 @@
 package eco.backend.main_app.feature.calculation;
 
 import eco.backend.main_app.core.exception.GenericException;
+import eco.backend.main_app.feature.auth.EmailService;
 import eco.backend.main_app.feature.auth.UserService;
 import eco.backend.main_app.feature.auth.model.UserEntity;
 import eco.backend.main_app.feature.calculation.dto.CalculationRequestDto;
@@ -14,6 +15,8 @@ import eco.backend.main_app.feature.tracking.model.TrackingEntity;
 import eco.backend.main_app.utils.AppConstants;
 import eco.backend.main_app.utils.ReuseHelper;
 import jakarta.transaction.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -30,6 +33,7 @@ public class CalculationService {
     private final ConfigService configService;
     private final TrackingService trackingService;
     private final CalculationRepository calculationRepository;
+    private static final Logger logger = LoggerFactory.getLogger(CalculationService.class);
 
     public CalculationService(TrackingRepository trackingRepository,
                               UserService userService,
@@ -53,7 +57,13 @@ public class CalculationService {
      * @return DTO mit Berechnungsergebnissen
      */
     public CalculationResultsDto runCalculation(String username, CalculationRequestDto requestDto) {
+        logger.debug("Starting cost calculation... ");
+
         UserEntity user = userService.findUserByName(username);
+
+        if(!userService.hasValidStatus(user)){
+            throw new GenericException("Invalid user status.", HttpStatus.FORBIDDEN);
+        }
 
         // User-Konfiguration laden
         ConfigEntity configData = configService.getConfigByUsername(user.getUsername());
@@ -93,56 +103,63 @@ public class CalculationService {
         long daysBetween = ChronoUnit.DAYS.between(prevEntry.getTimestamp().toLocalDate(), currentEntry.getTimestamp().toLocalDate());
 
         // ***** Berechnungslogik *****
-        // Differenz der getrackten Werte bzw. verbrauchte Energiemenge [kWh]
-        double diffTrackedValues = currentEntry.getReadingValue() - prevEntry.getReadingValue();
+        try{
+            // Differenz der getrackten Werte bzw. verbrauchte Energiemenge [kWh]
+            double diffTrackedValues = currentEntry.getReadingValue() - prevEntry.getReadingValue();
 
-        SkippedMonthsResults skippedMonths = estimateSkippedMonths(prevEntry.getTimestamp().toLocalDate(), configData.getDueDay(), configData.getSepaProcessingDays());
+            SkippedMonthsResults skippedMonths = estimateSkippedMonths(prevEntry.getTimestamp().toLocalDate(), configData.getDueDay(), configData.getSepaProcessingDays());
 
-        if (skippedMonths.message != null) { logMessage = skippedMonths.message; }
+            if (skippedMonths.message != null) { logMessage = skippedMonths.message; }
 
-        // Normierter Verbrauch pro Tag [kWh/Tag]
-        double normConsumptionPerDay = diffTrackedValues / daysBetween;
-        
-        // Netto Verbrauchspreis berechnen [€/kWh]
-        double netConsumptionPrice = configData.getEnergyPrice()/(1 + configData.getVatRate()) - configData.getEnergyTax();
-        
-        // Netto Verbrauchskosten berechnen [€]
-        double netConsumptionCostPeriod = diffTrackedValues * netConsumptionPrice;
-        
-        // Netto Grundpreis berechnen [€]
-        double netBasePrice = configData.getBasePrice()/(1 + configData.getVatRate());
-        
-        // Netto Grundkosten berechnen [€]
-        double netBaseCostPeriod = netBasePrice * MONTHS_IN_YEAR/DAYS_IN_YEAR * daysBetween;
+            // Normierter Verbrauch pro Tag [kWh/Tag]
+            double normConsumptionPerDay = diffTrackedValues / daysBetween;
 
-        // Netto Gesamtkosten der Stromsteuer berechnen [€]
-        double netEnergyTaxCostPeriod = configData.getEnergyTax() * diffTrackedValues;
+            // Netto Verbrauchspreis berechnen [€/kWh]
+            double netConsumptionPrice = configData.getEnergyPrice()/(1 + configData.getVatRate()) - configData.getEnergyTax();
 
-        // Netto Gesamtkosten anhand der verbrauchten Energiemenge berechnen [€]
-        double netTotalCostPeriod = (netConsumptionCostPeriod) + netBaseCostPeriod + netEnergyTaxCostPeriod;
+            // Netto Verbrauchskosten berechnen [€]
+            double netConsumptionCostPeriod = diffTrackedValues * netConsumptionPrice;
 
-        // Brutto Gesamtkosten berechnen [€]
-        double bruttoTotalCostPeriod = netTotalCostPeriod * (1 + configData.getVatRate());
+            // Netto Grundpreis berechnen [€]
+            double netBasePrice = configData.getBasePrice()/(1 + configData.getVatRate());
 
-        // Gezahlten Abschläge im betrachteten Abrechnungszeitraum
-        double paidAmountPeriod = configData.getMonthlyAdvance() * (MONTHS_IN_YEAR - skippedMonths.value)/DAYS_IN_YEAR * daysBetween;
+            // Netto Grundkosten berechnen [€]
+            double netBaseCostPeriod = netBasePrice * MONTHS_IN_YEAR/DAYS_IN_YEAR * daysBetween;
 
-        // Brutto Restbetrag berechnen [€]
-        double costDiffPeriod = (paidAmountPeriod - bruttoTotalCostPeriod) + configData.getAdditionalCredit();
+            // Netto Gesamtkosten der Stromsteuer berechnen [€]
+            double netEnergyTaxCostPeriod = configData.getEnergyTax() * diffTrackedValues;
 
-        // Ergebnisse übergeben
-        return new CalculationResultsDto(
-                configData.getMeterIdentifier(),
-                prevEntry.getTimestamp().toLocalDate(),
-                currentEntry.getTimestamp().toLocalDate(),
-                daysBetween,
-                paidAmountPeriod,
-                bruttoTotalCostPeriod,
-                diffTrackedValues,
-                costDiffPeriod,
-                normConsumptionPerDay,
-                logMessage
-        );
+            // Netto Gesamtkosten anhand der verbrauchten Energiemenge berechnen [€]
+            double netTotalCostPeriod = (netConsumptionCostPeriod) + netBaseCostPeriod + netEnergyTaxCostPeriod;
+
+            // Brutto Gesamtkosten berechnen [€]
+            double bruttoTotalCostPeriod = netTotalCostPeriod * (1 + configData.getVatRate());
+
+            // Gezahlten Abschläge im betrachteten Abrechnungszeitraum
+            double paidAmountPeriod = configData.getMonthlyAdvance() * (MONTHS_IN_YEAR - skippedMonths.value)/DAYS_IN_YEAR * daysBetween;
+
+            // Brutto Restbetrag berechnen [€]
+            double costDiffPeriod = (paidAmountPeriod - bruttoTotalCostPeriod) + configData.getAdditionalCredit();
+
+            logger.debug("Cost calculation completed.");
+
+            // Ergebnisse übergeben
+            return new CalculationResultsDto(
+                    configData.getMeterIdentifier(),
+                    prevEntry.getTimestamp().toLocalDate(),
+                    currentEntry.getTimestamp().toLocalDate(),
+                    daysBetween,
+                    paidAmountPeriod,
+                    bruttoTotalCostPeriod,
+                    diffTrackedValues,
+                    costDiffPeriod,
+                    normConsumptionPerDay,
+                    logMessage
+            );
+        } catch (Exception e) {
+            logger.error("Unexpected error: {}", e.getMessage());
+            throw new GenericException("Unexpected error: " +  e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     /**
@@ -163,6 +180,7 @@ public class CalculationService {
      */
     @Transactional
     public void saveResultsInEntity(String username, CalculationResultsDto results) {
+        logger.debug("Saving calculation results... ");
         UserEntity user = userService.findUserByName(username);
 
         // Konvertierung: LocalDate (DTO) -> LocalDateTime (Entity)
@@ -193,6 +211,8 @@ public class CalculationService {
 
         // Speichern
         calculationRepository.save(entityToSave);
+
+        logger.debug("Calculation results saved.");
     }
 
     /**
@@ -252,5 +272,6 @@ public class CalculationService {
     public void deleteAllEntries(String username) {
         UserEntity user = userService.findUserByName(username);
         calculationRepository.deleteByUserId(user.getId());
+        logger.debug("All calculated results have been removed by user: {}", user.getUsername());
     }
 }

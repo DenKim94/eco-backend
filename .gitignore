@@ -37,3 +37,4 @@ out/
 ### Custom ###
 /src/main/java/eco/backend/main_app/*.http
 /database/*.db
+/logs/*.log

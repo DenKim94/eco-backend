@@ -30,6 +30,9 @@ public class UserEntity implements UserDetails {
     @Column(name = "created_at", nullable = false)
     private String createdAt;
 
+    @Column(name = "tfa_code", nullable = false)
+    private String tfaCode;
+
     // Default-Wert 'USER'
     @Column(nullable = false)
     private String role = "USER";
@@ -69,11 +72,12 @@ public class UserEntity implements UserDetails {
     public UserEntity() {}
 
     // Konstruktor zum Anlegen neuer User
-    public UserEntity(String username, String password, String email) {
+    public UserEntity(String username, String password, String email, String tfaDefaultCode) {
         this.username = username;
         this.password = password;
         this.email = email;
         this.role = "USER";
+        this.tfaCode = tfaDefaultCode;
     }
 
     @PrePersist
@@ -100,4 +104,6 @@ public class UserEntity implements UserDetails {
     public String getEmail() { return this.email; }
     public boolean getIsValidatedEmail(){ return this.isValidatedEmail; }
     public void setIsValidatedEmail(boolean isValidEmail) { this.isValidatedEmail = true; }
+    public String getTfaCode() { return this.tfaCode; }
+    public void setTfaCode(String tfaCode) { this.tfaCode = tfaCode; }
 }

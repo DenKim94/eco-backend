@@ -7,7 +7,8 @@ CREATE TABLE users (
     username     TEXT NOT NULL UNIQUE,
     password     TEXT NOT NULL,
     email        TEXT NOT NULL UNIQUE,
-    created_at   TEXT NOT NULL
+    created_at   TEXT NOT NULL,
+    tfa_code     TEXT NOT NULL
 );
 
 -- 2. Tabelle: METER_READINGS (Sub-Tabelle)

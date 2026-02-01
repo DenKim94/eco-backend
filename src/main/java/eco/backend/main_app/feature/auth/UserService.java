@@ -3,7 +3,10 @@ package eco.backend.main_app.feature.auth;
 import eco.backend.main_app.core.exception.GenericException;
 import eco.backend.main_app.feature.auth.admin.dto.ListUserRequest;
 import eco.backend.main_app.feature.auth.model.UserEntity;
+import eco.backend.main_app.feature.calculation.CalculationService;
 import jakarta.transaction.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -15,6 +18,7 @@ import java.util.List;
 @Service
 public class UserService implements UserDetailsService {
     private final UserRepository userRepository;
+    private static final Logger logger = LoggerFactory.getLogger(UserService.class);
 
     public UserService(UserRepository userRepository) {
         this.userRepository = userRepository;
@@ -83,6 +87,12 @@ public class UserService implements UserDetailsService {
 
     public void deleteAccount(String username) {
         UserEntity user = findUserByName(username);
+        if(isAdmin(user.getId())){ throw new GenericException("Admin can't be removed.", HttpStatus.FORBIDDEN); }
         deleteUserById(user.getId());
+    }
+
+    public boolean hasValidStatus(UserEntity user){
+        logger.debug("Checking user status... ");
+        return ((user.getIsEnabled() && user.getIsValidatedEmail()) || isAdmin(user.getId()));
     }
 }
