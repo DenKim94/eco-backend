@@ -1,10 +1,13 @@
 package eco.backend.main_app.core.security;
 
+import eco.backend.main_app.feature.auth.AuthService;
 import eco.backend.main_app.feature.auth.model.UserEntity;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
@@ -23,6 +26,8 @@ public class JwtService {
     @Value("${jwt.expiration}")
     private long jwtExpirationMs;
 
+    private static final Logger logger = LoggerFactory.getLogger(JwtService.class);
+
     // Token generieren (für Login)
     public String getGeneratedToken(UserEntity user) {
         Map<String, Object> claims = new HashMap<>();
@@ -31,14 +36,17 @@ public class JwtService {
     }
 
     public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
+        logger.debug("Generate JWT ...");
+
         return Jwts.builder()
                 .claims(extraClaims)
                 .subject(userDetails.getUsername())
                 .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + jwtExpirationMs)) // 24 Stunden gültig
+                .expiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
                 .signWith(getSigningKey(), Jwts.SIG.HS256)
                 .compact();
     }
+
     // Username aus Token extrahieren (für Validierung)
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
@@ -46,6 +54,8 @@ public class JwtService {
 
     // Token validieren: Passt Token zum User & ist er nicht abgelaufen?
     public boolean isTokenValid(String token, UserEntity user) {
+        logger.debug("Checking JWT validity ...");
+
         final String username = extractUsername(token);
         final Integer versionInToken = extractTokenVersion(token);
         return (username.equals(user.getUsername()))
