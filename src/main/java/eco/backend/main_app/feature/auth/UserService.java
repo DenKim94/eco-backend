@@ -3,7 +3,6 @@ package eco.backend.main_app.feature.auth;
 import eco.backend.main_app.core.exception.GenericException;
 import eco.backend.main_app.feature.auth.admin.dto.ListUserRequest;
 import eco.backend.main_app.feature.auth.model.UserEntity;
-import eco.backend.main_app.feature.calculation.CalculationService;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,7 +66,7 @@ public class UserService implements UserDetailsService {
         userRepository.save(user);
     }
 
-    private boolean isAdmin(Long userId) {
+    public boolean isAdmin(Long userId) {
         UserEntity user = findUserById(userId);
         return "ADMIN".equals(user.getRole());
     }

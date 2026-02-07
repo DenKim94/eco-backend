@@ -15,7 +15,7 @@ public class AppConstants {
             Bitte gib diesen Code in der App ein, um deine E-Mail zu bestätigen.
             
             
-            Beste Grüße.
+            Viele Grüße.
             """;
 
     public static final String TEXT_RESET_PASSWORD = """
@@ -26,6 +26,6 @@ public class AppConstants {
             Bitte gib diesen Code in der App ein, um dein Passwort zurücksetzen zu können.
             
             
-            Beste Grüße.
+            Viele Grüße.
             """;
 }

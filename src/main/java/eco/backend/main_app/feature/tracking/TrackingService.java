@@ -44,7 +44,7 @@ public class TrackingService {
     public List<TrackingEntity> getAllEntries(String username) {
         UserEntity user = userService.findUserByName(username);
         if(!userService.hasValidStatus(user)){
-            throw new GenericException("Invalid user status.", HttpStatus.FORBIDDEN);
+            throw new GenericException("Invalid account status.", HttpStatus.FORBIDDEN);
         }
         return repository.findByUserIdOrderByTimestampAsc(user.getId());
     }
@@ -56,7 +56,7 @@ public class TrackingService {
         UserEntity user = userService.findUserByName(username);
 
         if(!userService.hasValidStatus(user)){
-            throw new GenericException("Invalid user status.", HttpStatus.FORBIDDEN);
+            throw new GenericException("Invalid account status.", HttpStatus.FORBIDDEN);
         }
 
         ConfigEntity config = configService.getConfigByUsername(username);
@@ -92,7 +92,7 @@ public class TrackingService {
         UserEntity user = userService.findUserByName(username);
 
         if(!userService.hasValidStatus(user)){
-            throw new GenericException("Invalid user status.", HttpStatus.FORBIDDEN);
+            throw new GenericException("Invalid account status.", HttpStatus.FORBIDDEN);
         }
 
         return repository.findFirstByUserIdOrderByTimestampDesc(user.getId())
@@ -106,7 +106,7 @@ public class TrackingService {
         UserEntity user = userService.findUserByName(username);
 
         if(!userService.hasValidStatus(user)){
-            throw new GenericException("Invalid user status.", HttpStatus.FORBIDDEN);
+            throw new GenericException("Invalid account status.", HttpStatus.FORBIDDEN);
         }
 
         TrackingEntity foundEntry = getEntryById(readingId);
@@ -139,7 +139,7 @@ public class TrackingService {
         UserEntity currentUser = userService.findUserByName(username);
 
         if(!userService.hasValidStatus(currentUser)){
-            throw new GenericException("Invalid user status.", HttpStatus.FORBIDDEN);
+            throw new GenericException("Invalid account status.", HttpStatus.FORBIDDEN);
         }
 
         // Den existierenden Eintrag aus der DB holen
@@ -266,7 +266,7 @@ public class TrackingService {
         UserEntity user = userService.findUserByName(username);
 
         if(!userService.hasValidStatus(user)){
-            throw new GenericException("Invalid user status.", HttpStatus.FORBIDDEN);
+            throw new GenericException("Invalid account status.", HttpStatus.FORBIDDEN);
         }
 
         // Löschen aller Einträge, die diesem User gehören

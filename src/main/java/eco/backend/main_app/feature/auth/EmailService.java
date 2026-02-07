@@ -44,7 +44,7 @@ public class EmailService {
 
         message.setFrom(senderAddress);
         message.setTo(toEmail);
-        message.setSubject("ECO-App: Dein Verifizierungscode");
+        message.setSubject("Dein Verifizierungscode");
         message.setText(text.formatted(tfaCode));
 
         return message;

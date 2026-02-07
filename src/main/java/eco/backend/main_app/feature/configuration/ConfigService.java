@@ -44,7 +44,7 @@ public class ConfigService {
     public ConfigEntity getConfigByUsername(String username) {
         UserEntity user = userService.findUserByName(username);
         if(!userService.hasValidStatus(userService.findUserByName(username))){
-            throw new GenericException("Invalid user status.", HttpStatus.FORBIDDEN);
+            throw new GenericException("Invalid account status.", HttpStatus.FORBIDDEN);
         }
 
         return configRepository.findByUserId(user.getId())
@@ -79,7 +79,7 @@ public class ConfigService {
         logger.debug("Updating configuration for User {} ...", username);
 
         if(!userService.hasValidStatus(userService.findUserByName(username))){
-            throw new GenericException("Invalid user status.", HttpStatus.FORBIDDEN);
+            throw new GenericException("Invalid account status.", HttpStatus.FORBIDDEN);
         }
 
         ConfigEntity config = getConfigByUsername(username);
