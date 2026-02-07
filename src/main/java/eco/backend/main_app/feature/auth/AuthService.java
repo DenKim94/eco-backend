@@ -226,7 +226,6 @@ public class AuthService {
             logger.error("Invalid code provided.: {}", tfaCode);
             isInvalid = true;
         }
-        logger.debug("Provided TFA-Code is valid: {}", !isInvalid);
 
         return isInvalid;
     }
