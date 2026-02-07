@@ -99,6 +99,9 @@ public class AuthService {
 
     @Transactional
     public UserEntity authenticateUser(LoginRequest request) {
+
+        logger.debug("Authenticate user ...");
+
         // AuthenticationManager prüft Username & Passwort gegen die DB
         Authentication auth = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.username(), request.password())
@@ -118,18 +121,25 @@ public class AuthService {
 
         userRepository.save(user);
 
+        logger.debug("User authenticated successfully.");
+
         return user;
     }
 
     @Transactional
-    public void logout(String username) {
+    public UserEntity updateTokenVersion(String username) {
         UserEntity user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new GenericException("User not found.", HttpStatus.NOT_FOUND));
 
+        if(!userService.hasValidStatus(user)){
+            throw new GenericException("Invalid account status.", HttpStatus.FORBIDDEN);
+        }
+
         // Version hochzählen: Token wird ungültig
         user.updateTokenVersion();
-        userRepository.save(user);
+        return userRepository.save(user);
     }
+
 
     /**
      * Fordert einen neuen Bestätigungscode an.
@@ -266,6 +276,4 @@ public class AuthService {
         logger.debug("Admin password has been updated.");
     }
 
-
-    // TODO [01.02.2026]:: Methode, Gültigkeitsdauer des User-JWT abzufragen
 }

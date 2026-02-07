@@ -81,12 +81,33 @@ public class AuthController {
     }
 
     /**
+     * POST /api/auth/refresh-token
+     */
+    @PostMapping("/refresh-token")
+    public ResponseEntity<Map<String, Object>> refreshToken(@AuthenticationPrincipal UserDetails userDetails) {
+
+        String username = userDetails.getUsername();
+
+        UserEntity user = authService.updateTokenVersion(username);
+
+        // JWT generieren
+        String refreshedToken = jwtService.getGeneratedToken(user);
+
+        // Refresh-Token zurückgeben
+        return ResponseEntity.ok(Map.of(
+                "token", refreshedToken,
+                "expiresIn", jwtExpirationMs
+        ));
+    }
+
+    /**
      * POST /api/auth/logout
      */
     @PostMapping("/logout")
     public ResponseEntity<Map<String, String>> logout(Authentication authentication) { // User aus dem SecurityContext
         String username = authentication.getName();
-        authService.logout(username);
+        authService.updateTokenVersion(username);
+
         return ResponseEntity.ok(Map.of("message", "User " + username + " logged out successfully"));
     }
 
@@ -145,5 +166,4 @@ public class AuthController {
         authService.resetUserPassword(userDetails.getUsername(), dto);
         return ResponseEntity.ok(Map.of("message", "User password has been updated successfully."));
     }
-
 }
