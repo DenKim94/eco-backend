@@ -1,6 +1,7 @@
 package eco.backend.main_app.feature.auth;
 
 import eco.backend.main_app.core.exception.GenericException;
+import eco.backend.main_app.feature.auth.admin.dto.UpdatePasswordRequest;
 import eco.backend.main_app.feature.auth.dto.LoginRequest;
 import eco.backend.main_app.feature.auth.dto.RegisterRequest;
 import eco.backend.main_app.feature.auth.dto.ResetPasswordRequest;
@@ -30,6 +31,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final ApplicationEventPublisher eventPublisher;
     private final EmailService emailService;
+    private final UserService userService;
     private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
 
     private final SecureRandom secureRandom = new SecureRandom();
@@ -42,13 +44,15 @@ public class AuthService {
                        PasswordEncoder passwordEncoder,
                        AuthenticationManager authenticationManager,
                        ApplicationEventPublisher eventPublisher,
-                       EmailService emailService) {
+                       EmailService emailService,
+                       UserService userService) {
 
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.eventPublisher = eventPublisher;
         this.emailService = emailService;
+        this.userService = userService;
     }
 
     @Transactional
@@ -136,7 +140,7 @@ public class AuthService {
         UserEntity user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new GenericException("User not found.", HttpStatus.NOT_FOUND));
 
-        if (user.getIsValidatedEmail()) {
+        if (user.getIsValidatedEmail() ) {
             throw new GenericException("E-Mail already validated.", HttpStatus.CONFLICT);
         }
 
@@ -190,12 +194,13 @@ public class AuthService {
     }
 
     public void resetUserPassword(String username, ResetPasswordRequest dto){
-        logger.debug("Update password of user {} ...", username);
+        logger.debug("User {} updates password ...", username);
+
         UserEntity user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new GenericException("User not found.", HttpStatus.NOT_FOUND));
 
-        if (!user.getIsValidatedEmail() || !user.getIsEnabled()) {
-            throw new GenericException("Invalid user status.", HttpStatus.FORBIDDEN);
+        if (!userService.isAdmin(user.getId()) && (!user.getIsValidatedEmail() || !user.getIsEnabled())) {
+            throw new GenericException("Invalid account status.", HttpStatus.FORBIDDEN);
         }
 
         // Code Vergleich
@@ -226,7 +231,42 @@ public class AuthService {
         return isInvalid;
     }
 
-    // TODO [01.02.2026]:: Methode, um TFA-Code zum Passwort-Update via Mail an den User zu senden
+    /** Methode, um TFA-Code zum Passwort-Update via Mail an den User zu senden */
+    @Transactional
+    public void sendCodeForPasswordUpdate(String username) {
+        logger.debug("Sending new code to reset password ...");
+
+        UserEntity user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new GenericException("User not found.", HttpStatus.NOT_FOUND));
+
+        if(!userService.isAdmin(user.getId()) && (!user.getIsEnabled() || !user.getIsValidatedEmail())){ throw new GenericException("Invalid account status.", HttpStatus.FORBIDDEN); }
+
+        // Neuen Code generieren und speichern
+        String tfaCode = generateRandomCode();
+        user.setTfaCode(tfaCode);
+        userRepository.save(user);
+
+        // Mail senden
+        emailService.sendVerificationEmail(user.getEmail(), tfaCode, AppConstants.TEXT_RESET_PASSWORD);
+    }
+
+    @Transactional
+    public void updateAdminPassword(String username, UpdatePasswordRequest dto){
+        logger.debug("Update Admin password ...");
+
+        UserEntity user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new GenericException("User not found.", HttpStatus.NOT_FOUND));
+
+        if(!userService.isAdmin(user.getId())){ throw new GenericException("Action not allowed.", HttpStatus.FORBIDDEN);}
+
+        // Neues Password setzen und speichern
+        String encodedPassword = passwordEncoder.encode(dto.newPassword());
+        user.setPassword(encodedPassword);
+
+        userRepository.save(user);
+        logger.debug("Admin password has been updated.");
+    }
+
 
     // TODO [01.02.2026]:: Methode, Gültigkeitsdauer des User-JWT abzufragen
 }

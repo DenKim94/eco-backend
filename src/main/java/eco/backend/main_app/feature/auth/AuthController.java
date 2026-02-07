@@ -4,6 +4,7 @@ import eco.backend.main_app.core.exception.GenericException;
 import eco.backend.main_app.core.security.JwtService;
 import eco.backend.main_app.feature.auth.dto.LoginRequest;
 import eco.backend.main_app.feature.auth.dto.RegisterRequest;
+import eco.backend.main_app.feature.auth.dto.ResetPasswordRequest;
 import eco.backend.main_app.feature.auth.dto.VerificationRequest;
 import eco.backend.main_app.feature.auth.model.UserEntity;
 import org.springframework.beans.factory.annotation.Value;
@@ -119,10 +120,30 @@ public class AuthController {
     public ResponseEntity<Map<String, String>> resendEmail(@AuthenticationPrincipal UserDetails userDetails) {
 
         authService.resendVerificationCode(userDetails.getUsername());
-        return ResponseEntity.ok(Map.of("message", "Email verification code has been resent successfully."));
+        return ResponseEntity.ok(Map.of("message", "Verification code has been sent successfully."));
     }
 
-    // TODO [01.02.2026]: Methode, um TFA-Code zum Passwort-Update via Mail an den User zu senden
+    /**
+     * POST /api/auth/user-password/request
+     * Einen neuen Bestätigungscode an den User senden, um Passwort zu aktualisieren
+     */
+    @PostMapping("/user-password/request")
+    public ResponseEntity<Map<String, String>> sendEmailForPasswordUpdate(@AuthenticationPrincipal UserDetails userDetails) {
 
-    // TODO [01.02.2026]: Methode, um neues Passwort über gültigen TFA-Code zu setzen/speichern
+        authService.sendCodeForPasswordUpdate(userDetails.getUsername());
+        return ResponseEntity.ok(Map.of("message", "Verification code has been sent successfully."));
+    }
+
+    /**
+     * POST /api/auth/user-password/reset
+     * TFA-Code prüfen und Passwort des Users aktualisieren
+     */
+    @PostMapping("/user-password/reset")
+    public ResponseEntity<Map<String, String>> resetUserPassword(@AuthenticationPrincipal UserDetails userDetails,
+                                                           @RequestBody ResetPasswordRequest dto) {
+
+        authService.resetUserPassword(userDetails.getUsername(), dto);
+        return ResponseEntity.ok(Map.of("message", "User password has been updated successfully."));
+    }
+
 }
