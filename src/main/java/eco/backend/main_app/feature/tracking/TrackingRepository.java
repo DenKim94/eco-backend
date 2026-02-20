@@ -30,9 +30,6 @@ public interface TrackingRepository extends JpaRepository<TrackingEntity, Long> 
     Optional<TrackingEntity> findFirstByUserIdAndTimestampGreaterThanEqualAndIdNotOrderByTimestampAsc(
             Long userId, LocalDateTime timestamp, Long id);
 
-    // Eintrag über Datum (Timestamp) finden
-    Optional<TrackingEntity> findByUserIdAndTimestamp(Long userId, LocalDateTime timestamp);
-
     // Finde den (ersten) Eintrag eines Users an einem bestimmten Tag
     Optional<TrackingEntity> findFirstByUserIdAndTimestampBetween(
             Long userId, LocalDateTime start, LocalDateTime end
