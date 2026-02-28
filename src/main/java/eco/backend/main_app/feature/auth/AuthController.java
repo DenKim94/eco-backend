@@ -76,7 +76,9 @@ public class AuthController {
         // Token zurückgeben
         return ResponseEntity.ok(Map.of(
                 "token", jwtToken,
-                "expiresIn", jwtExpirationMs
+                "expiresIn", jwtExpirationMs,
+                "user", user.getUsername(),
+                "role", user.getRole()
         ));
     }
 
@@ -96,7 +98,9 @@ public class AuthController {
         // Refresh-Token zurückgeben
         return ResponseEntity.ok(Map.of(
                 "token", refreshedToken,
-                "expiresIn", jwtExpirationMs
+                "expiresIn", jwtExpirationMs,
+                "user", user.getUsername(),
+                "role", user.getRole()
         ));
     }
 
@@ -165,5 +169,21 @@ public class AuthController {
 
         authService.resetUserPassword(userDetails.getUsername(), dto);
         return ResponseEntity.ok(Map.of("message", "User password has been updated successfully."));
+    }
+
+    @GetMapping("/user/get-info")
+    public ResponseEntity<Map<String, Object>> getUserInfo(@AuthenticationPrincipal UserDetails userDetails){
+        String username = userDetails.getUsername();
+        UserEntity user = userService.findUserByName(username);
+        boolean isValid = userService.hasValidStatus(user);
+
+        return ResponseEntity.ok(Map.of(
+                "name", user.getUsername(),
+                "role", user.getRole(),
+                "id", user.getId(),
+                "createdAt", user.getCreatedAt(),
+                "eMail", user.getEmail(),
+                "hasValidStatus", isValid
+        ));
     }
 }
