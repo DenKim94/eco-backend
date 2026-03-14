@@ -83,7 +83,7 @@ public class AuthService {
             eventPublisher.publishEvent(new UserRegisteredEvent(this, registeredUser));
 
             // 6. E-Mail senden
-            emailService.sendVerificationEmail(dto.email(), tfaCode, AppConstants.TEXT_VERIFY_EMAIL);
+            emailService.sendVerificationEmail(dto.username(), dto.email(), tfaCode, AppConstants.TEXT_VERIFY_EMAIL);
 
             logger.debug("New user has been registered.");
         }
@@ -162,7 +162,7 @@ public class AuthService {
         userRepository.save(user);
 
         // Mail senden
-        emailService.sendVerificationEmail(user.getEmail(), newCode, AppConstants.TEXT_VERIFY_EMAIL);
+        emailService.sendVerificationEmail(user.getUsername(), user.getEmail(), newCode, AppConstants.TEXT_VERIFY_EMAIL);
     }
 
     /**
@@ -194,7 +194,7 @@ public class AuthService {
      * Z.B. maxStringLength=6: "482910"
      */
     private String generateRandomCode() {
-        int maxStringLength = 10; // Anzahl maximaler Zeichen
+        int maxStringLength = 6; // Anzahl maximaler Zeichen
 
         StringBuilder code = new StringBuilder();
         for (int i = 0; i < maxStringLength; i++) {
@@ -203,10 +203,10 @@ public class AuthService {
         return code.toString();
     }
 
-    public void resetUserPassword(String username, ResetPasswordRequest dto){
-        logger.debug("User {} updates password ...", username);
+    public void resetUserPassword(ResetPasswordRequest dto){
+        logger.debug("User updates password ...");
 
-        UserEntity user = userRepository.findByUsername(username)
+        UserEntity user = userRepository.findByEmail(dto.email())
                 .orElseThrow(() -> new GenericException("User not found.", HttpStatus.NOT_FOUND));
 
         if (!userService.isAdmin(user.getId()) && (!user.getIsValidatedEmail() || !user.getIsEnabled())) {
@@ -242,11 +242,11 @@ public class AuthService {
 
     /** Methode, um TFA-Code zum Passwort-Update via Mail an den User zu senden */
     @Transactional
-    public void sendCodeForPasswordUpdate(String username) {
+    public void sendCodeForPasswordUpdate(String email) {
         logger.debug("Sending new code to reset password ...");
 
-        UserEntity user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new GenericException("User not found.", HttpStatus.NOT_FOUND));
+        UserEntity user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new GenericException("User could not be found by provided E-Mail-Adress.", HttpStatus.NOT_FOUND));
 
         if(!userService.isAdmin(user.getId()) && (!user.getIsEnabled() || !user.getIsValidatedEmail())){ throw new GenericException("Invalid account status.", HttpStatus.FORBIDDEN); }
 
@@ -256,7 +256,7 @@ public class AuthService {
         userRepository.save(user);
 
         // Mail senden
-        emailService.sendVerificationEmail(user.getEmail(), tfaCode, AppConstants.TEXT_RESET_PASSWORD);
+        emailService.sendVerificationEmail(user.getUsername(), user.getEmail(), tfaCode, AppConstants.TEXT_RESET_PASSWORD);
     }
 
     @Transactional

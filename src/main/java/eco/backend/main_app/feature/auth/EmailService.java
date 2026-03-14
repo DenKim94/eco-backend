@@ -26,10 +26,10 @@ public class EmailService {
      * Sendet eine E-Mail über den konfigurierten SMTP Server.
      */
     @Async
-    public void sendVerificationEmail(String toEmail, String tfaCode, String text) {
+    public void sendVerificationEmail(String name, String toEmail, String tfaCode, String text) {
         try {
             logger.debug("Sending E-Mail to {} ...", toEmail);
-            SimpleMailMessage message = getSimpleMailMessage(toEmail, tfaCode, text);
+            SimpleMailMessage message = getSimpleMailMessage(name, toEmail, tfaCode, text);
 
             mailSender.send(message);
             logger.debug("E-Mail to {} has been sent.", toEmail);
@@ -39,13 +39,13 @@ public class EmailService {
         }
     }
 
-    private SimpleMailMessage getSimpleMailMessage(String toEmail, String tfaCode, String text) {
+    private SimpleMailMessage getSimpleMailMessage(String name, String toEmail, String tfaCode, String text) {
         SimpleMailMessage message = new SimpleMailMessage();
 
         message.setFrom(senderAddress);
         message.setTo(toEmail);
         message.setSubject("Dein Verifizierungscode");
-        message.setText(text.formatted(tfaCode));
+        message.setText(text.formatted(name, tfaCode));
 
         return message;
     }

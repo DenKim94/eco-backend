@@ -8,7 +8,7 @@ public class AppConstants {
     public static final DateTimeFormatter JSON_DATE_FORMATTER = DateTimeFormatter.ofPattern(JSON_DATE_PATTERN);
 
     public static final String TEXT_VERIFY_EMAIL = """
-            Hallo und willkommen!
+            Hallo %s und willkommen!
             
             Dein Verifizierungscode lautet: %s
             
@@ -19,7 +19,7 @@ public class AppConstants {
             """;
 
     public static final String TEXT_RESET_PASSWORD = """
-            Hallo!
+            Hallo %s!
             
             Dein Verifizierungscode lautet: %s
             

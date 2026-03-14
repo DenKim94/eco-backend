@@ -1,4 +1,4 @@
 package eco.backend.main_app.feature.auth.dto;
 
-public record ResetPasswordRequest( String newPassword, String tfaCode ) {
+public record ResetPasswordRequest(String email, String newPassword, String tfaCode ) {
 }

@@ -43,6 +43,15 @@ public class SecurityConfig {
 
             // Routen konfigurieren
             .authorizeHttpRequests(auth -> auth
+                    .requestMatchers(
+                            "/api/auth/refresh-token",
+                            "/api/auth/logout",
+                            "/api/auth/delete-account",
+                            "/api/auth/verify-email",
+                            "/api/auth/resend-email",
+                            "/api/auth/user/get-info"
+                    ).authenticated()
+
                     // WICHTIG: Registrierung muss für JEDEN offen sein (permitAll)
                     .requestMatchers("/api/auth/**").permitAll()
                     .requestMatchers("/api/admin/**").hasRole("ADMIN")

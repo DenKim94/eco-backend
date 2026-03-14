@@ -2,10 +2,7 @@ package eco.backend.main_app.feature.auth;
 
 import eco.backend.main_app.core.exception.GenericException;
 import eco.backend.main_app.core.security.JwtService;
-import eco.backend.main_app.feature.auth.dto.LoginRequest;
-import eco.backend.main_app.feature.auth.dto.RegisterRequest;
-import eco.backend.main_app.feature.auth.dto.ResetPasswordRequest;
-import eco.backend.main_app.feature.auth.dto.VerificationRequest;
+import eco.backend.main_app.feature.auth.dto.*;
 import eco.backend.main_app.feature.auth.model.UserEntity;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -153,9 +150,9 @@ public class AuthController {
      * Einen neuen Bestätigungscode an den User senden, um Passwort zu aktualisieren
      */
     @PostMapping("/user-password/request")
-    public ResponseEntity<Map<String, String>> sendEmailForPasswordUpdate(@AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<Map<String, String>> sendEmailForPasswordUpdate(@RequestBody PasswordUpdateRequest request) {
 
-        authService.sendCodeForPasswordUpdate(userDetails.getUsername());
+        authService.sendCodeForPasswordUpdate(request.email());
         return ResponseEntity.ok(Map.of("message", "Verification code has been sent successfully."));
     }
 
@@ -164,10 +161,9 @@ public class AuthController {
      * TFA-Code prüfen und Passwort des Users aktualisieren
      */
     @PostMapping("/user-password/reset")
-    public ResponseEntity<Map<String, String>> resetUserPassword(@AuthenticationPrincipal UserDetails userDetails,
-                                                           @RequestBody ResetPasswordRequest dto) {
+    public ResponseEntity<Map<String, String>> resetUserPassword(@RequestBody ResetPasswordRequest dto) {
 
-        authService.resetUserPassword(userDetails.getUsername(), dto);
+        authService.resetUserPassword(dto);
         return ResponseEntity.ok(Map.of("message", "User password has been updated successfully."));
     }
 
