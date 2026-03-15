@@ -3,6 +3,7 @@ package eco.backend.main_app.config;
 import eco.backend.main_app.core.security.JwtAuthenticationFilter;
 import eco.backend.main_app.core.security.CustomAccessDeniedHandler;
 import eco.backend.main_app.feature.auth.UserService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -18,6 +19,11 @@ import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -26,6 +32,9 @@ public class SecurityConfig {
     private final UserService userService; // Inject UserService
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final CustomAccessDeniedHandler accessDeniedHandler;
+
+    @Value("${app.cors.allowed-origins}")
+    private List<String> allowedOrigins;
 
     public SecurityConfig(UserService userService,
                           JwtAuthenticationFilter jwtAuthFilter,
@@ -38,6 +47,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             // CSRF deaktivieren (Cross-Site Request Forgery), da JWT genutzt wird
             .csrf(AbstractHttpConfigurer::disable)
 
@@ -76,6 +86,29 @@ public class SecurityConfig {
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+
+        // Erlaubte Ursprünge (Frontend-URLs) setzen
+        configuration.setAllowedOrigins(allowedOrigins);
+
+        // Erlaubte HTTP-Methoden (OPTIONS ist zwingend erforderlich für Preflight-Requests)
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+
+        // Erlaubte Header (Authorization für das JWT, Content-Type für JSON-Bodys)
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+
+        // WICHTIG: Wenn AllowCredentials auf 'true' steht, darf allowedOrigins nicht "*" sein!
+        configuration.setAllowCredentials(true);
+
+        // Die Konfiguration auf alle Endpunkte (/**) anwenden
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+
+        return source;
     }
 
     @Bean
