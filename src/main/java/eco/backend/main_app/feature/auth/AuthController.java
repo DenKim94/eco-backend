@@ -56,7 +56,6 @@ public class AuthController {
                     HttpStatus.BAD_REQUEST
             );
         }
-
     }
 
     /**
@@ -174,15 +173,16 @@ public class AuthController {
     public ResponseEntity<Map<String, Object>> getUserInfo(@AuthenticationPrincipal UserDetails userDetails){
         String username = userDetails.getUsername();
         UserEntity user = userService.findUserByName(username);
-        boolean isValid = userService.hasValidStatus(user);
+        boolean isEnabled = user.getIsEnabled();
+        boolean isValidatedEmail = user.getIsValidatedEmail();
 
         return ResponseEntity.ok(Map.of(
                 "name", user.getUsername(),
                 "role", user.getRole(),
-                "id", user.getId(),
                 "createdAt", user.getCreatedAt(),
                 "eMail", user.getEmail(),
-                "hasValidStatus", isValid
+                "isEnabled", isEnabled,
+                "isValidatedEmail", isValidatedEmail
         ));
     }
 }

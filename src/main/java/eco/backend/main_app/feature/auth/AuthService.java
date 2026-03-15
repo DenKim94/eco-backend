@@ -131,10 +131,6 @@ public class AuthService {
         UserEntity user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new GenericException("User not found.", HttpStatus.NOT_FOUND));
 
-        if(!userService.hasValidStatus(user)){
-            throw new GenericException("Invalid account status.", HttpStatus.FORBIDDEN);
-        }
-
         // Version hochzählen: Token wird ungültig
         user.updateTokenVersion();
         return userRepository.save(user);
@@ -209,7 +205,7 @@ public class AuthService {
         UserEntity user = userRepository.findByEmail(dto.email())
                 .orElseThrow(() -> new GenericException("User not found.", HttpStatus.NOT_FOUND));
 
-        if (!userService.isAdmin(user.getId()) && (!user.getIsValidatedEmail() || !user.getIsEnabled())) {
+        if (!userService.isAdmin(user.getId()) && !user.getIsEnabled()) {
             throw new GenericException("Invalid account status.", HttpStatus.FORBIDDEN);
         }
 
