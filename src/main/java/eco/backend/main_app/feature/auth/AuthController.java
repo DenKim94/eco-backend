@@ -66,6 +66,7 @@ public class AuthController {
     public ResponseEntity<Map<String, Object>> login(@RequestBody LoginRequest request) {
         // Authentifizierung durchführen und User laden
         UserEntity user = authService.authenticateUser(request);
+        boolean isValid = userService.hasValidStatus(user);
 
         // JWT generieren
         String jwtToken = jwtService.getGeneratedToken(user);
@@ -74,8 +75,9 @@ public class AuthController {
         return ResponseEntity.ok(Map.of(
                 "token", jwtToken,
                 "expiresIn", jwtExpirationMs,
-                "user", user.getUsername(),
-                "role", user.getRole()
+                "userName", user.getUsername(),
+                "role", user.getRole(),
+                "hasValidStatus", isValid
         ));
     }
 
@@ -86,8 +88,8 @@ public class AuthController {
     public ResponseEntity<Map<String, Object>> refreshToken(@AuthenticationPrincipal UserDetails userDetails) {
 
         String username = userDetails.getUsername();
-
         UserEntity user = authService.updateTokenVersion(username);
+        boolean isValid = userService.hasValidStatus(user);
 
         // JWT generieren
         String refreshedToken = jwtService.getGeneratedToken(user);
@@ -96,8 +98,9 @@ public class AuthController {
         return ResponseEntity.ok(Map.of(
                 "token", refreshedToken,
                 "expiresIn", jwtExpirationMs,
-                "user", user.getUsername(),
-                "role", user.getRole()
+                "userName", user.getUsername(),
+                "role", user.getRole(),
+                "hasValidStatus", isValid
         ));
     }
 
