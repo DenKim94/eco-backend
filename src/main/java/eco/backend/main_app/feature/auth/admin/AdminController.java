@@ -33,7 +33,7 @@ public class AdminController {
     public ResponseEntity<?> deleteUser(@PathVariable Long id) {
         UserEntity user = userService.findUserById(id);
         userService.deleteUserById(id);
-        return ResponseEntity.ok(Map.of("message", "User " + user.getUsername() + " has been removed."));
+        return ResponseEntity.ok(Map.of("message", "Profil von " + user.getUsername() + " wurde erfolgreich entfernt."));
     }
 
     // User sperren/entsperren
@@ -41,11 +41,11 @@ public class AdminController {
     public ResponseEntity<?> setUserStatus(@PathVariable Long id, @RequestParam boolean isEnabled) {
         UserEntity user = userService.findUserById(id);
         if(!user.getIsEnabled() && !isEnabled){
-            return ResponseEntity.ok(Map.of("message", "User " + user.getUsername() + " is already disabled."));
+            return ResponseEntity.ok(Map.of("message", "Profil von " + user.getUsername() + " ist bereits deaktiviert."));
         }
         userService.setUserEnabled(id, isEnabled);
-        String status = isEnabled ? "activated" : "disabled";
-        return ResponseEntity.ok(Map.of("message", "User " + user.getUsername() + " has been " + status + "."));
+        String status = isEnabled ? "aktiviert" : "deaktiviert";
+        return ResponseEntity.ok(Map.of("message", "Profil von " + user.getUsername() + " wurde " + status + "."));
     }
 
     // Alle registrierten User anzeigen
@@ -63,6 +63,6 @@ public class AdminController {
                                                                  @RequestBody UpdatePasswordRequest dto) {
 
         authService.updateAdminPassword(userDetails.getUsername(), dto);
-        return ResponseEntity.ok(Map.of("message", "Admin password has been updated successfully."));
+        return ResponseEntity.ok(Map.of("message", "Admin Passwort wurde erfolgreich geändert."));
     }
 }

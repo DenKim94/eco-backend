@@ -32,7 +32,7 @@ public class TrackingController {
         if (result == null) {
             return ResponseEntity
                     .status(HttpStatus.NOT_FOUND)
-                    .body("Entry not found.");
+                    .body("Kein Eintrag gefunden.");
         }
 
         return ResponseEntity.ok(result);
@@ -46,13 +46,13 @@ public class TrackingController {
     @DeleteMapping("/{id}/delete")
     public ResponseEntity<Map<String, String>> deleteEntry(@AuthenticationPrincipal UserDetails user, @PathVariable("id") Long id) {
         service.deleteEntryById(user.getUsername(), id);
-        return ResponseEntity.ok(Map.of("message", "Entry has been removed successfully."));
+        return ResponseEntity.ok(Map.of("message", "Eintrag wurde erfolgreich entfernt."));
     }
 
     @DeleteMapping("/delete-all")
     public ResponseEntity<Map<String, String>> deleteAllEntries(@AuthenticationPrincipal UserDetails user){
         service.deleteAllEntries(user.getUsername());
-        return ResponseEntity.ok(Map.of("message", "All tracked entries have been removed successfully."));
+        return ResponseEntity.ok(Map.of("message", "Alle Einträge wurden erfolgreich entfernt."));
     }
 
     @PutMapping("/{id}/update")

@@ -44,7 +44,7 @@ public class TrackingService {
     public List<TrackingEntity> getAllEntries(String username) {
         UserEntity user = userService.findUserByName(username);
         if(!userService.hasValidStatus(user)){
-            throw new GenericException("Invalid account status.", HttpStatus.FORBIDDEN);
+            throw new GenericException("Ungültiger Accountstatus.", HttpStatus.FORBIDDEN);
         }
         return repository.findByUserIdOrderByTimestampAsc(user.getId());
     }
@@ -52,11 +52,11 @@ public class TrackingService {
     /** Eintrag hinzufügen */
     @Transactional
     public TrackingEntity addEntry(String username, TrackingDto dto) {
-        logger.debug("Adding new tracking entry...");
+        logger.debug("Neuen Eintrag einfügen...");
         UserEntity user = userService.findUserByName(username);
 
         if(!userService.hasValidStatus(user)){
-            throw new GenericException("Invalid account status.", HttpStatus.FORBIDDEN);
+            throw new GenericException("Ungültiger Accountstatus.", HttpStatus.FORBIDDEN);
         }
 
         ConfigEntity config = configService.getConfigByUsername(username);
@@ -83,7 +83,7 @@ public class TrackingService {
             throw new GenericException(errorMsg, HttpStatus.BAD_REQUEST);
         });
 
-        logger.debug("New tracking entry added by user: {}", username);
+        logger.debug("Eintrag hinzugefügt von: {}", username);
         return repository.save(entity);
     }
 
@@ -92,7 +92,7 @@ public class TrackingService {
         UserEntity user = userService.findUserByName(username);
 
         if(!userService.hasValidStatus(user)){
-            throw new GenericException("Invalid account status.", HttpStatus.FORBIDDEN);
+            throw new GenericException("Ungültiger Accountstatus.", HttpStatus.FORBIDDEN);
         }
 
         return repository.findFirstByUserIdOrderByTimestampDesc(user.getId())
@@ -102,44 +102,44 @@ public class TrackingService {
     /** Bestimmten Eintrag anhand der ID entfernen */
     @Transactional
     public void deleteEntryById(String username, Long readingId) {
-        logger.debug("Delete tracking entry with ID: {} ...", readingId);
+        logger.debug("Eintrag mit ID: {} entfernen...", readingId);
         UserEntity user = userService.findUserByName(username);
 
         if(!userService.hasValidStatus(user)){
-            throw new GenericException("Invalid account status.", HttpStatus.FORBIDDEN);
+            throw new GenericException("Ungültiger Accountstatus.", HttpStatus.FORBIDDEN);
         }
 
         TrackingEntity foundEntry = getEntryById(readingId);
 
         if (!foundEntry.getUser().getId().equals(user.getId())) {
-            throw new GenericException("You are not allowed to delete this entry.", HttpStatus.FORBIDDEN);
+            throw new GenericException("Zugriff verweigert.", HttpStatus.FORBIDDEN);
         }
 
         repository.delete(foundEntry);
-        logger.debug("Tracking entry with ID: {} has been removed.", foundEntry.getId());
+        logger.debug("Eintrag mit ID: {} erfolgreich entfernt.", foundEntry.getId());
     }
 
     /** Hilfsmethode: Eintrag anhand der ID finden */
     private TrackingEntity getEntryById(Long id){
 
         return repository.findById(id)
-                .orElseThrow(() -> new GenericException("Could not find entry.", HttpStatus.BAD_REQUEST));
+                .orElseThrow(() -> new GenericException("Eintrag nicht gefunden.", HttpStatus.BAD_REQUEST));
     }
 
     /** Bestimmten Eintrag anhand der ID aktualisieren */
     @Transactional
     public TrackingEntity updateEntryById(String username, Long id, TrackingDto updateDto) {
-        logger.debug("Update tracking entry with ID: {} ...", id);
+        logger.debug("Eintrag mit ID: {} aktualisieren...", id);
 
         if (updateDto.date().isBlank() && updateDto.value_kWh() == null){
-            throw new GenericException("Update failed: No data provided.", HttpStatus.BAD_REQUEST);
+            throw new GenericException("Keine Daten übergeben.", HttpStatus.BAD_REQUEST);
         }
 
         // Den User laden, der die Anfrage stellt
         UserEntity currentUser = userService.findUserByName(username);
 
         if(!userService.hasValidStatus(currentUser)){
-            throw new GenericException("Invalid account status.", HttpStatus.FORBIDDEN);
+            throw new GenericException("Ungültiger Accountstatus.", HttpStatus.FORBIDDEN);
         }
 
         // Den existierenden Eintrag aus der DB holen
@@ -148,7 +148,7 @@ public class TrackingService {
         // CHECK: Gehört der Eintrag zum korrekten User?
         // Wenn die USer-IDs nicht übereinstimmen, dürfen die Daten nicht geändert werden
         if (!entryToUpdate.getUser().getId().equals(currentUser.getId())) {
-            throw new GenericException("Update failed: Invalid entry ID.", HttpStatus.BAD_REQUEST);
+            throw new GenericException("Ungültige ID.", HttpStatus.BAD_REQUEST);
         }
 
         LocalDateTime updatedDate = updateDto.date().isBlank() ? entryToUpdate.getTimestamp() : ReuseHelper.getParsedDateTime(updateDto.date()) ;
@@ -165,7 +165,7 @@ public class TrackingService {
         }
         entryToUpdate.setTimestamp(updatedDate);
 
-        logger.debug("Tracking entry with ID: {} updated.", id);
+        logger.debug("Eintrag mit ID: {} erfolgreich aktualisiert.", id);
         // Speichern
         return repository.save(entryToUpdate);
     }
@@ -175,7 +175,7 @@ public class TrackingService {
 
         // CHECK: Wert darf nicht null oder negativ sein
         if (dto.value_kWh() == null || dto.value_kWh() < 0) {
-            return Optional.of("Validation error: Provided value is null or negative.");
+            return Optional.of("Ungültiger Wert.");
         }
 
         TrackingEntity lastEntry = getNewestEntry(username);
@@ -188,19 +188,19 @@ public class TrackingService {
 
         // CHECK: Aktueller Eintrag darf nicht ÄLTER sein als der letzte Eintrag
         if (currentTimestamp.toLocalDate().isBefore(lastEntry.getTimestamp().toLocalDate())) {
-            return Optional.of("Validation error: Invalid date of provided value.");
+            return Optional.of("Ungültiges Datum.");
         }
 
         // CHECK: Es darf noch kein Eintrag am selben Tag existieren (ignoriert Uhrzeit)
         boolean isSameDay = currentTimestamp.toLocalDate().isEqual(lastEntry.getTimestamp().toLocalDate());
         if (isSameDay) {
-            return Optional.of("Validation error: Entry already exists for provided date.");
+            return Optional.of("Eintrag für den selben Tag existiert bereits.");
         }
 
         // CHECK: Wert muss größer sein als der vorherige
         return (dto.value_kWh() > lastEntry.getReadingValue()) ?
                 Optional.empty() :
-                Optional.of("Validation error: The value of the current entry must be greater than that of the previous entry.");
+                Optional.of("Ungültiger Wert. Der aktuelle Wert muss größer sein als der vorherige.");
     }
 
     /**
@@ -217,7 +217,7 @@ public class TrackingService {
 
         // CHECK: Wert darf nicht negativ sein
         if (value_kWh < 0) {
-            return Optional.of("Update failed: Provided value is negative.");
+            return Optional.of("Ungültiger Wert. Der aktuelle Wert darf nicht negativ sein.");
         }
 
         Long userId = entityToUpdate.getUser().getId();
@@ -240,17 +240,17 @@ public class TrackingService {
         if (predecessor != null) {
             predecessorCheck = value_kWh > predecessor.getReadingValue() && !newTimestamp.isBefore(predecessor.getTimestamp());
             if (successor == null) {
-                return predecessorCheck ? Optional.empty() : Optional.of("Update failed: Conflict with previous entry.");
+                return predecessorCheck ? Optional.empty() : Optional.of("Ungültiger Wert. Konflikt mit dem vorherigen Eintrag.");
             }
         }
 
         // --- PRÜFUNG GEGEN NACHFOLGER ---
         boolean successorCheck = value_kWh < successor.getReadingValue() && !newTimestamp.isAfter(successor.getTimestamp());
         if (predecessor == null) {
-            return successorCheck ? Optional.empty() : Optional.of("Update failed: Conflict with the following entry.");
+            return successorCheck ? Optional.empty() : Optional.of("Ungültiger Wert. Konflikt mit dem nachfolgenden Eintrag.");
         }
 
-        return (predecessorCheck && successorCheck)? Optional.empty() : Optional.of("Update failed: Provided entry has invalid values.");
+        return (predecessorCheck && successorCheck)? Optional.empty() : Optional.of("Ungültiger Wert.");
     }
 
     /**
@@ -261,12 +261,12 @@ public class TrackingService {
      */
     @Transactional
     public void deleteAllEntries(String username) {
-        logger.debug("Delete all tracked data of user: {} ...", username);
+        logger.debug("Alle Daten von {} entfernen...", username);
         // User laden
         UserEntity user = userService.findUserByName(username);
 
         if(!userService.hasValidStatus(user)){
-            throw new GenericException("Invalid account status.", HttpStatus.FORBIDDEN);
+            throw new GenericException("Ungültiger Accountstatus.", HttpStatus.FORBIDDEN);
         }
 
         // Löschen aller Einträge, die diesem User gehören
@@ -279,7 +279,7 @@ public class TrackingService {
             configRepository.save(config);
         }
 
-        logger.debug("All tracked data of user: {} have been removed.", username);
+        logger.debug("Alle Daten von {} erfolgreich entfernt.", username);
     }
 
     /**
@@ -289,10 +289,9 @@ public class TrackingService {
      * @param date Zieldatum
      */
     public TrackingEntity findEntryByDate(List<TrackingEntity> trackedData, LocalDate date){
-
         return trackedData.stream()
                 .filter(e -> e.getTimestamp().toLocalDate().isEqual(date))
                 .findFirst()
-                .orElseThrow(() -> new GenericException("No entry found for the given date.", HttpStatus.BAD_REQUEST));
+                .orElseThrow(() -> new GenericException("Kein Eintrag gefunden.", HttpStatus.BAD_REQUEST));
     }
 }

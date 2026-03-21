@@ -57,7 +57,7 @@ public class CalculationController {
     @DeleteMapping("/delete-all")
     public ResponseEntity<Map<String, String>> deleteAllEntries(@AuthenticationPrincipal UserDetails user){
         calculationService.deleteAllEntries(user.getUsername());
-        return ResponseEntity.ok(Map.of("message", "All tracked entries have been removed successfully."));
+        return ResponseEntity.ok(Map.of("message", "Alle Berechnungsdaten wurden erfolgreich gelöscht."));
     }
 }
 

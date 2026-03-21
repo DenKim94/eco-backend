@@ -2,14 +2,12 @@ package eco.backend.main_app.core.exception;
 
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
-import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 
 import java.nio.file.AccessDeniedException;
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -32,8 +30,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleDisabledException() {
         Map<String, Object> response = new HashMap<>();
         response.put("status", HttpStatus.FORBIDDEN.value()); // 403 passt hier oft besser als 401
-        response.put("error", "Account is disabled.");
-        response.put("message", "User has been disabled by admin.");
+        response.put("error", "Profil ist deaktiviert.");
+        response.put("message", "Profil wurde durch den Admin deaktiviert.");
 
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
     }
@@ -43,8 +41,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleAuthError() {
         Map<String, Object> response = new HashMap<>();
         response.put("status", HttpStatus.UNAUTHORIZED.value());
-        response.put("error", "Unauthorized");
-        response.put("message", "Wrong username or password.");
+        response.put("error", "Falscher Username oder Passwort.");
+        response.put("message", "Falscher Username oder Passwort.");
 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
     }
@@ -53,8 +51,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleAccessDeniedException() {
         Map<String, Object> response = new HashMap<>();
         response.put("status", HttpStatus.FORBIDDEN.value()); // 403
-        response.put("error", "Access Denied");
-        response.put("message", "You do not have required permission to perform this action.");
+        response.put("error", "Zugang verweigert.");
+        response.put("message", "Fehlende Berechtigung.");
 
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
     }

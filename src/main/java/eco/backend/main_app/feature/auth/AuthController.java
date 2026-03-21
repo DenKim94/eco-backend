@@ -47,7 +47,7 @@ public class AuthController {
             return ResponseEntity
                     .status(HttpStatus.CREATED) // 201 Created
                     .body(Map.of(
-                            "message", "User successfully registered.",
+                            "message", "Registrierung erfolgreich abgeschlossen.",
                             "username", request.username()
                     ));
         } catch (Exception e) {
@@ -111,7 +111,7 @@ public class AuthController {
         String username = authentication.getName();
         authService.updateTokenVersion(username);
 
-        return ResponseEntity.ok(Map.of("message", "User " + username + " logged out successfully"));
+        return ResponseEntity.ok(Map.of("message", "Account erfolgreich ausgeloggt."));
     }
 
     /**
@@ -121,7 +121,7 @@ public class AuthController {
     public ResponseEntity<Map<String, String>> deleteAccount(Authentication authentication) {
         String username = authentication.getName();
         userService.deleteAccount(username);
-        return ResponseEntity.ok(Map.of("message", "Account of " + username + " has been deleted successfully."));
+        return ResponseEntity.ok(Map.of("message", "Profil von " + username + " wurde erfolgreich gelöscht."));
     }
 
     /**
@@ -133,7 +133,7 @@ public class AuthController {
                                                            @RequestBody VerificationRequest dto) {
 
         authService.verifyEmailCode(userDetails.getUsername(), dto);
-        return ResponseEntity.ok(Map.of("message", "Email verified successfully."));
+        return ResponseEntity.ok(Map.of("message", "Email wurde erfolgreich verifiziert."));
     }
 
     /**
@@ -144,7 +144,7 @@ public class AuthController {
     public ResponseEntity<Map<String, String>> resendEmail(@AuthenticationPrincipal UserDetails userDetails) {
 
         authService.resendVerificationCode(userDetails.getUsername());
-        return ResponseEntity.ok(Map.of("message", "Verification code has been sent successfully."));
+        return ResponseEntity.ok(Map.of("message", "Email wurde erfolgreich gesendet."));
     }
 
     /**
@@ -155,7 +155,7 @@ public class AuthController {
     public ResponseEntity<Map<String, String>> sendEmailForPasswordUpdate(@RequestBody PasswordUpdateRequest request) {
 
         authService.sendCodeForPasswordUpdate(request.email());
-        return ResponseEntity.ok(Map.of("message", "Verification code has been sent successfully."));
+        return ResponseEntity.ok(Map.of("message", "Email wurde erfolgreich gesendet."));
     }
 
     /**
@@ -166,7 +166,7 @@ public class AuthController {
     public ResponseEntity<Map<String, String>> resetUserPassword(@RequestBody ResetPasswordRequest dto) {
 
         authService.resetUserPassword(dto);
-        return ResponseEntity.ok(Map.of("message", "User password has been updated successfully."));
+        return ResponseEntity.ok(Map.of("message", "Passwort wurde erfolgreich aktualisiert."));
     }
 
     @GetMapping("/user/get-info")

@@ -27,29 +27,29 @@ public class UserService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         return userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found."));
+                .orElseThrow(() -> new UsernameNotFoundException("Account nicht gefunden."));
     }
 
     // Hilfsmethode für eigene Services
     public UserEntity findUserByName(String username) {
         return userRepository.findByUsername(username)
-                .orElseThrow(() -> new GenericException("Username not found.", HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new GenericException("Account nicht gefunden.", HttpStatus.NOT_FOUND));
     }
 
     public UserEntity findUserById(Long id) {
         return userRepository.findById(id)
-                .orElseThrow(() -> new GenericException("User not found by ID.", HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new GenericException("Account nicht gefunden.", HttpStatus.NOT_FOUND));
     }
 
     @Transactional
     public void deleteUserById(Long userId) {
 
         if (isAdmin(userId)) {
-            throw new GenericException("Admin can't be removed.", HttpStatus.FORBIDDEN);
+            throw new GenericException("Admin-Account kann nicht entfernt werden.", HttpStatus.FORBIDDEN);
         }
 
         if (!userRepository.existsById(userId)) {
-            throw new GenericException("User not found by ID.", HttpStatus.NOT_FOUND);
+            throw new GenericException("Account nicht gefunden.", HttpStatus.NOT_FOUND);
         }
         userRepository.deleteById(userId);
     }
@@ -59,7 +59,7 @@ public class UserService implements UserDetailsService {
         UserEntity user = findUserById(userId);
 
         if (isAdmin(userId) && !enabled) {
-            throw new GenericException("Admin can't be disabled.", HttpStatus.FORBIDDEN);
+            throw new GenericException("Admin-Account kann nicht deaktiviert werden.", HttpStatus.FORBIDDEN);
         }
 
         user.setEnabled(enabled);
@@ -86,12 +86,12 @@ public class UserService implements UserDetailsService {
 
     public void deleteAccount(String username) {
         UserEntity user = findUserByName(username);
-        if(isAdmin(user.getId())){ throw new GenericException("Admin can't be removed.", HttpStatus.FORBIDDEN); }
+        if(isAdmin(user.getId())){ throw new GenericException("Admin-Account kann nicht entfernt werden.", HttpStatus.FORBIDDEN); }
         deleteUserById(user.getId());
     }
 
     public boolean hasValidStatus(UserEntity user){
-        logger.debug("Checking user status... ");
+        logger.debug("Prüfe Accountstatus... ");
         return ((user.getIsEnabled() && user.getIsValidatedEmail()) || isAdmin(user.getId()));
     }
 }

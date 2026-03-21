@@ -28,14 +28,14 @@ public class EmailService {
     @Async
     public void sendVerificationEmail(String name, String toEmail, String tfaCode, String text) {
         try {
-            logger.debug("Sending E-Mail to {} ...", toEmail);
+            logger.debug("Sende E-Mail an {} ...", toEmail);
             SimpleMailMessage message = getSimpleMailMessage(name, toEmail, tfaCode, text);
 
             mailSender.send(message);
-            logger.debug("E-Mail to {} has been sent.", toEmail);
+            logger.debug("E-Mail an {} wurde erfolgreich versendet.", toEmail);
 
         } catch (Exception e) {
-            logger.error("Failed to send E-Mail to {}: {}", toEmail, e.getMessage());
+            logger.error("Fehler beim Versenden der E-Mail an {}: {}", toEmail, e.getMessage());
         }
     }
 

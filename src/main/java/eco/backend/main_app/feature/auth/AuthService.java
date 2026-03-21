@@ -57,12 +57,12 @@ public class AuthService {
 
     @Transactional
     public void register(RegisterRequest dto) {
-        logger.debug("Register new user ...");
+        logger.debug("Registrierung...");
 
         // 1. Prüfen, ob User bereits existiert
         if (userRepository.existsByUsername(dto.username())) {
             throw new GenericException(
-                    "Provided username '" + dto.username() + "' already exists.",
+                    "Account für '" + dto.username() + "' existiert bereits.",
                     HttpStatus.CONFLICT // Status 409
             );
         }
@@ -85,13 +85,13 @@ public class AuthService {
             // 6. E-Mail senden
             emailService.sendVerificationEmail(dto.username(), dto.email(), tfaCode, AppConstants.TEXT_VERIFY_EMAIL);
 
-            logger.debug("New user has been registered.");
+            logger.debug("Account wurde erfolgreich registriert.");
         }
         catch( Exception e ){
-            logger.error("Failed to register user: {}", e.getMessage());
+            logger.error("Fehler beim Registrieren des Accounts: {}", e.getMessage());
 
             throw new GenericException(
-                    "Failed to register user.",
+                    "Fehler beim Registrieren des Accounts.",
                     HttpStatus.INTERNAL_SERVER_ERROR // Status 500
             );
         }
@@ -100,7 +100,7 @@ public class AuthService {
     @Transactional
     public UserEntity authenticateUser(LoginRequest request) {
 
-        logger.debug("Authenticate user ...");
+        logger.debug("Authentifizierung des Users...");
 
         // AuthenticationManager prüft Username & Passwort gegen die DB
         Authentication auth = authenticationManager.authenticate(
@@ -121,7 +121,7 @@ public class AuthService {
 
         userRepository.save(user);
 
-        logger.debug("User authenticated successfully.");
+        logger.debug("User ist authentifiziert.");
 
         return user;
     }
@@ -129,7 +129,7 @@ public class AuthService {
     @Transactional
     public UserEntity updateTokenVersion(String username) {
         UserEntity user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new GenericException("User not found.", HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new GenericException("Account nicht gefunden.", HttpStatus.NOT_FOUND));
 
         // Version hochzählen: Token wird ungültig
         user.updateTokenVersion();
@@ -144,13 +144,13 @@ public class AuthService {
     @Transactional
     public void resendVerificationCode(String username) {
         UserEntity user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new GenericException("User not found.", HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new GenericException("Account nicht gefunden.", HttpStatus.NOT_FOUND));
 
         if (user.getIsValidatedEmail() ) {
-            throw new GenericException("E-Mail already validated.", HttpStatus.CONFLICT);
+            throw new GenericException("E-Mail ist bereits bestätigt.", HttpStatus.CONFLICT);
         }
 
-        if(!user.getIsEnabled()){ throw new GenericException("Account is disabled.", HttpStatus.FORBIDDEN); }
+        if(!user.getIsEnabled()){ throw new GenericException("Account ist deaktiviert.", HttpStatus.FORBIDDEN); }
 
         // Neuen Code generieren und speichern
         String newCode = generateRandomCode();
@@ -167,13 +167,13 @@ public class AuthService {
     @Transactional
     public void verifyEmailCode(String username, VerificationRequest dto) {
         UserEntity user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new GenericException("User not found.", HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new GenericException("Account nicht gefunden.", HttpStatus.NOT_FOUND));
 
-        if(!user.getIsEnabled()){ throw new GenericException("Account is disabled.", HttpStatus.FORBIDDEN); }
+        if(!user.getIsEnabled()){ throw new GenericException("Account ist deaktiviert.", HttpStatus.FORBIDDEN); }
 
         // Code Vergleich
         if (isInvalidTfaCode(user, dto.code())) {
-            throw new GenericException("Invalid code provided.", HttpStatus.BAD_REQUEST);
+            throw new GenericException("Ungültiger Code.", HttpStatus.BAD_REQUEST);
         }
 
         // E-Mail als bestätigt markieren
@@ -200,18 +200,18 @@ public class AuthService {
     }
 
     public void resetUserPassword(ResetPasswordRequest dto){
-        logger.debug("User updates password ...");
+        logger.debug("Aktualisiere Passwort ...");
 
         UserEntity user = userRepository.findByEmail(dto.email())
-                .orElseThrow(() -> new GenericException("User not found.", HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new GenericException("Account nicht gefunden.", HttpStatus.NOT_FOUND));
 
         if (!userService.isAdmin(user.getId()) && !user.getIsEnabled()) {
-            throw new GenericException("Invalid account status.", HttpStatus.FORBIDDEN);
+            throw new GenericException("Ungültiger Accountstatus.", HttpStatus.FORBIDDEN);
         }
 
         // Code Vergleich
         if (isInvalidTfaCode(user, dto.tfaCode())) {
-            throw new GenericException("Invalid code provided.", HttpStatus.BAD_REQUEST);
+            throw new GenericException("Ungültiger Code.", HttpStatus.BAD_REQUEST);
         }
 
         // Code aus Sicherheitsgründen nach Bestätigung neu generieren
@@ -222,14 +222,14 @@ public class AuthService {
         user.setPassword(encodedPassword);
 
         userRepository.save(user);
-        logger.debug("User password has been updated.");
+        logger.debug("Passwort wurde aktualisiert.");
     }
 
     private boolean isInvalidTfaCode(UserEntity user, String tfaCode){
         boolean isInvalid = false;
 
         if (user.getTfaCode() == null || user.getTfaCode().isBlank() || !user.getTfaCode().equals(tfaCode)) {
-            logger.error("Invalid code provided.: {}", tfaCode);
+            logger.error("Ungültiger Code: {}", tfaCode);
             isInvalid = true;
         }
 
@@ -239,12 +239,12 @@ public class AuthService {
     /** Methode, um TFA-Code zum Passwort-Update via Mail an den User zu senden */
     @Transactional
     public void sendCodeForPasswordUpdate(String email) {
-        logger.debug("Sending new code to reset password ...");
+        logger.debug("Sende Code für Passwort-Update...");
 
         UserEntity user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new GenericException("User could not be found by provided E-Mail-Adress.", HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new GenericException("Account nicht gefunden.", HttpStatus.NOT_FOUND));
 
-        if(!userService.isAdmin(user.getId()) && (!user.getIsEnabled() || !user.getIsValidatedEmail())){ throw new GenericException("Invalid account status.", HttpStatus.FORBIDDEN); }
+        if(!userService.isAdmin(user.getId()) && (!user.getIsEnabled() || !user.getIsValidatedEmail())){ throw new GenericException("Ungültiger Accountstatus", HttpStatus.FORBIDDEN); }
 
         // Neuen Code generieren und speichern
         String tfaCode = generateRandomCode();
@@ -257,19 +257,19 @@ public class AuthService {
 
     @Transactional
     public void updateAdminPassword(String username, UpdatePasswordRequest dto){
-        logger.debug("Update Admin password ...");
+        logger.debug("Aktualisiere Admin-Passwort...");
 
         UserEntity user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new GenericException("User not found.", HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new GenericException("Account nicht gefunden.", HttpStatus.NOT_FOUND));
 
-        if(!userService.isAdmin(user.getId())){ throw new GenericException("Action not allowed.", HttpStatus.FORBIDDEN);}
+        if(!userService.isAdmin(user.getId())){ throw new GenericException("Zugriff verweigert.", HttpStatus.FORBIDDEN);}
 
         // Neues Password setzen und speichern
         String encodedPassword = passwordEncoder.encode(dto.newPassword());
         user.setPassword(encodedPassword);
 
         userRepository.save(user);
-        logger.debug("Admin password has been updated.");
+        logger.debug("Admin-Passwort wurde erfolgreich geändert.");
     }
 
 }

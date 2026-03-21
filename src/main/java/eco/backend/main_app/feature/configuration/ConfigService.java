@@ -3,7 +3,6 @@ package eco.backend.main_app.feature.configuration;
 import eco.backend.main_app.core.exception.GenericException;
 import eco.backend.main_app.feature.auth.UserService;
 import eco.backend.main_app.feature.auth.model.UserEntity;
-import eco.backend.main_app.feature.calculation.CalculationService;
 import eco.backend.main_app.feature.configuration.dto.ConfigDto;
 import eco.backend.main_app.feature.configuration.model.ConfigEntity;
 import eco.backend.main_app.core.event.UserRegisteredEvent;
@@ -44,12 +43,12 @@ public class ConfigService {
     public ConfigEntity getConfigByUsername(String username) {
         UserEntity user = userService.findUserByName(username);
         if(!userService.hasValidStatus(userService.findUserByName(username))){
-            throw new GenericException("Invalid account status.", HttpStatus.FORBIDDEN);
+            throw new GenericException("Ungültiger Accountstatus.", HttpStatus.FORBIDDEN);
         }
 
         return configRepository.findByUserId(user.getId())
                 .orElseThrow(() ->  new GenericException(
-                        "Data inconsistency: No configuration of specific user found.",
+                        "Konfiguration wurde nicht gefunden.",
                         HttpStatus.INTERNAL_SERVER_ERROR)
         );
     }
@@ -68,7 +67,7 @@ public class ConfigService {
         // Default Config erstellen und speichern
         ConfigEntity defaultConfig = createDefaultConfig(user);
         configRepository.save(defaultConfig);
-        logger.debug("Default-Config for User {} has been created.", user.getUsername());
+        logger.debug("Standard-Konfiguration für {} wurde erstellt.", user.getUsername());
     }
 
     /**
@@ -76,10 +75,10 @@ public class ConfigService {
      */
     @Transactional
     public ConfigEntity updateConfig(String username, ConfigDto dto) {
-        logger.debug("Updating configuration for User {} ...", username);
+        logger.debug("Aktualisierung der Konfiguration für {} ...", username);
 
         if(!userService.hasValidStatus(userService.findUserByName(username))){
-            throw new GenericException("Invalid account status.", HttpStatus.FORBIDDEN);
+            throw new GenericException("Ungültiger Accountstatus.", HttpStatus.FORBIDDEN);
         }
 
         ConfigEntity config = getConfigByUsername(username);
@@ -105,11 +104,11 @@ public class ConfigService {
 
             // Prüfen, ob ein Eintrag für das Referenzdatum existiert
             TrackingEntity foundEntry = trackingRepository.findFirstByUserIdAndTimestampBetween(user.getId(), start, end)
-                    .orElseThrow(() -> new GenericException("No entry found for the given reference date.", HttpStatus.BAD_REQUEST));
+                    .orElseThrow(() -> new GenericException("Kein Eintrag für das Referenzdatum gefunden.", HttpStatus.BAD_REQUEST));
 
             config.setReferenceDate(foundEntry.getTimestamp());
         }
-        logger.debug("User configurations have been updated.");
+        logger.debug("Konfiguration wurde erfolgreich aktualisiert.");
 
         // Speichern der Änderungen
         return configRepository.save(config);

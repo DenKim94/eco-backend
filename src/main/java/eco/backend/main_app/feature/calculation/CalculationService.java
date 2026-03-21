@@ -78,7 +78,7 @@ public class CalculationService {
                 trackingRepository.findByUserIdAndTimestampBetweenOrderByTimestampDesc(user.getId(), startDate, endDate);
 
         if (trackedData.size() < MIN_DATA_POINTS) {
-            throw new GenericException("Not enough data points. At least " + MIN_DATA_POINTS + " are required.", HttpStatus.BAD_REQUEST);
+            throw new GenericException("Nicht genügend Datenpunkte. Mindestens " + MIN_DATA_POINTS + " Datenpunkte erforderlich.", HttpStatus.BAD_REQUEST);
         }
 
          Optional<TrackingEntity> result = (endDate != null) ?
@@ -86,7 +86,7 @@ public class CalculationService {
                  Optional.empty();
 
          if (result.isEmpty()) {
-             throw new GenericException("No entry found for the given date.", HttpStatus.BAD_REQUEST);
+             throw new GenericException("Kein Eintrag gefunden für das gegebene Datum.", HttpStatus.BAD_REQUEST);
          }
 
          TrackingEntity refEntry = (startDate == null) ? trackedData.getLast() : trackingService.findEntryByDate(trackedData, startDate.toLocalDate());
@@ -101,7 +101,7 @@ public class CalculationService {
             // Datum-Validierung pro Paar
             if (!validDates(refEntry.getTimestamp(), currentEntry.getTimestamp())) {
                 throw new GenericException(
-                        "Invalid date values: The start date must be before the end date.",
+                        "Ungültige Datumswerte: Die Startdatum muss vor dem Enddatum liegen.",
                         HttpStatus.BAD_REQUEST
                 );
             }
@@ -111,8 +111,8 @@ public class CalculationService {
             results.add(singleResult);
         }
 
-        logger.debug("Cost calculation completed. {} period(s) calculated.", results.size());
-        logger.debug("Number of data points: {}", trackedData.size());
+        logger.debug("Berechnung für {} period(s) durchgeführt.", results.size());
+        logger.debug("Anzahl der Datenpunkte: {}", trackedData.size());
 
         // Rückgabe der Liste
         return results;
@@ -172,8 +172,8 @@ public class CalculationService {
                     logMessage
             );
         } catch (Exception e) {
-            logger.error("Unexpected error during single period calculation: {}", e.getMessage());
-            throw new GenericException("Unexpected error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            logger.error("Fehler bei Berechnung: {}", e.getMessage());
+            throw new GenericException("Fehler bei Berechnung: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -195,7 +195,7 @@ public class CalculationService {
      */
     @Transactional
     public void saveResultsInEntity(String username, List<CalculationResultsDto> resultsList) {
-        logger.debug("Saving {} calculation result(s)...", resultsList.size());
+        logger.debug("Speichern von {} Berechnungsergebnissen...", resultsList.size());
 
         UserEntity user = userService.findUserByName(username);
 
@@ -228,10 +228,10 @@ public class CalculationService {
 
             calculationRepository.save(entityToSave);
 
-            logger.debug("Saved result for period {} -> {}.", results.startDate(), results.endDate());
+            logger.debug("Speichern der Berechnungsergebnisse von {} bis {}.", results.startDate(), results.endDate());
         }
 
-        logger.debug("All calculation results saved.");
+        logger.debug("Alle Berechnungsergebnisse gespeichert.");
     }
 
     /**
@@ -279,7 +279,7 @@ public class CalculationService {
 
         // Message ausgeben
         if (skippedMonths > 0) {
-            message = " " + skippedMonths + " installment month(s) were skipped due to SEPA processing time.";
+            message = " " + skippedMonths + " Abrechnungsmonat(e) wurde(n) übersprungen.";
         }
         logger.debug(message);
 
@@ -292,6 +292,6 @@ public class CalculationService {
     public void deleteAllEntries(String username) {
         UserEntity user = userService.findUserByName(username);
         calculationRepository.deleteByUserId(user.getId());
-        logger.debug("All calculated results have been removed by user: {}", user.getUsername());
+        logger.debug("Alle Berechnungsergebnisse wurden gelöscht von User: {}", user.getUsername());
     }
 }
