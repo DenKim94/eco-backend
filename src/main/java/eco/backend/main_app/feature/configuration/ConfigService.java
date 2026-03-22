@@ -89,7 +89,7 @@ public class ConfigService {
         if (dto.energyTax() != null) config.setEnergyTax(dto.energyTax());
         if (dto.vatRate() != null) config.setVatRate(dto.vatRate());
         if (dto.monthlyAdvance() != null) config.setMonthlyAdvance(dto.monthlyAdvance());
-        if (dto.dueDate() != null) config.setDueDay(dto.dueDate());
+        if (dto.dueDay() != null) config.setDueDay(dto.dueDay());
         if (dto.sepaProcessingDays() != null) config.setSepaProcessingDays(dto.sepaProcessingDays());
         if (dto.additionalCredit() != null) config.setAdditionalCredit(dto.additionalCredit());
         if (dto.meterIdentifier() != null && !dto.meterIdentifier().isBlank()) config.setMeterIdentifier(dto.meterIdentifier());
