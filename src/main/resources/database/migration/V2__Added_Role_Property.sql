@@ -4,10 +4,20 @@ ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'USER';
 
 INSERT INTO users (username, password, email, role, tfa_code, created_at)
 VALUES (
-    'admin',
+    '${admin_name}',
     '${admin_hash}',
     'no-email-required',
     'ADMIN',
     '${admin_tfa_code}',
-    '2025-12-28T14:00:00'
+    '2026-03-29T13:00:00'
+);
+
+INSERT INTO users (username, password, email, role, tfa_code, created_at)
+VALUES (
+    '${test_user_name}',
+    '${test_user_hash}',
+    '${test_user_email}',
+    'USER',
+    '${test_user_tfa_code}',
+    '2026-03-29T13:30:00'
 );

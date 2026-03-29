@@ -18,13 +18,13 @@ SELECT
     0.3467,             -- energy_price
     0.0205,             -- energy_tax
     0.19,               -- vat_rate
-    50.00,              -- monthly_advance
+    55.00,              -- monthly_advance
     0.00,               -- additional_credit
     5,                  -- due_day
     15,                 -- sepa_processing_days
-    'XXXXX-METER-ID',   -- meter_identifier
+    '587432-D4',        -- meter_identifier
     NULL                -- reference_date
 
 FROM users
-WHERE username = '${admin_name}'
+WHERE username = '${test_user_name}'
 ON CONFLICT (user_id) DO NOTHING;

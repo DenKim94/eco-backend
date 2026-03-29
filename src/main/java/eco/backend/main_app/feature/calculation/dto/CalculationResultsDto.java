@@ -7,7 +7,7 @@ public record CalculationResultsDto(
         LocalDate startDate,            // Startdatum der Abrechnungszeit
         LocalDate endDate,              // Enddatum der Abrechnungszeit
         long daysBetween,               // Anzahl der Tage in der Abrechnungszeit
-        double paidAmountPeriod,        // Summe der Einzahlungen über den Abrechnungszeitraum[€]
+        double paidAmountPeriod,        // Summe der Einzahlungen über den Abrechnungszeitraum [€]
         double bruttoTotalCostPeriod,   // Gesamtkosten (brutto) anhand der verbrauchten Energiemenge [€]
         double totalConsumptionKwh,     // Summe der bisher verbrauchte Energiemenge [kWh]
         double costDiffPeriod,          // Brutto Restbetrag [€]: Positiv = Nachzahlung, Negativ = Guthaben
