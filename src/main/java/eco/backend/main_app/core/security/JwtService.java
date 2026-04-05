@@ -1,6 +1,5 @@
 package eco.backend.main_app.core.security;
 
-import eco.backend.main_app.feature.auth.AuthService;
 import eco.backend.main_app.feature.auth.model.UserEntity;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -32,6 +31,8 @@ public class JwtService {
     public String getGeneratedToken(UserEntity user) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("tokenVersion", user.getTokenVersion());
+        claims.put("userRole", user.getRole());
+        claims.put("hasValidStatus", (user.getIsEnabled() && user.getIsValidatedEmail()));
         return generateToken(claims, user);
     }
 
