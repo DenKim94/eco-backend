@@ -156,6 +156,7 @@ public class TrackingService {
 
         // CHECK: Validierung
         isValidUpdatedDto(entryToUpdate, value_kWh, updatedDate).ifPresent(errorMsg -> {
+            logger.error(errorMsg);
             throw new GenericException(errorMsg, HttpStatus.BAD_REQUEST);
         });
 
@@ -175,6 +176,7 @@ public class TrackingService {
 
         // CHECK: Wert darf nicht null oder negativ sein
         if (dto.value_kWh() == null || dto.value_kWh() < 0) {
+            logger.error("Ungültiger Wert.");
             return Optional.of("Ungültiger Wert.");
         }
 
@@ -188,12 +190,14 @@ public class TrackingService {
 
         // CHECK: Aktueller Eintrag darf nicht ÄLTER sein als der letzte Eintrag
         if (currentTimestamp.toLocalDate().isBefore(lastEntry.getTimestamp().toLocalDate())) {
+            logger.error("Ungültiges Datum.");
             return Optional.of("Ungültiges Datum.");
         }
 
         // CHECK: Es darf noch kein Eintrag am selben Tag existieren (ignoriert Uhrzeit)
         boolean isSameDay = currentTimestamp.toLocalDate().isEqual(lastEntry.getTimestamp().toLocalDate());
         if (isSameDay) {
+            logger.error("Eintrag für den selben Tag existiert bereits.");
             return Optional.of("Eintrag für den selben Tag existiert bereits.");
         }
 
@@ -238,19 +242,19 @@ public class TrackingService {
 
         // --- PRÜFUNG GEGEN VORGÄNGER ---
         if (predecessor != null) {
-            predecessorCheck = value_kWh > predecessor.getReadingValue() && !newTimestamp.isBefore(predecessor.getTimestamp());
+            predecessorCheck = (value_kWh > predecessor.getReadingValue() && !newTimestamp.toLocalDate().isBefore(predecessor.getTimestamp().toLocalDate()) && !newTimestamp.toLocalDate().isEqual(predecessor.getTimestamp().toLocalDate()));
             if (successor == null) {
                 return predecessorCheck ? Optional.empty() : Optional.of("Ungültiger Wert. Konflikt mit dem vorherigen Eintrag.");
             }
         }
 
         // --- PRÜFUNG GEGEN NACHFOLGER ---
-        boolean successorCheck = value_kWh < successor.getReadingValue() && !newTimestamp.isAfter(successor.getTimestamp());
+        boolean successorCheck = (value_kWh < successor.getReadingValue() && !newTimestamp.toLocalDate().isAfter(successor.getTimestamp().toLocalDate()) && !newTimestamp.toLocalDate().isEqual(successor.getTimestamp().toLocalDate()));
         if (predecessor == null) {
             return successorCheck ? Optional.empty() : Optional.of("Ungültiger Wert. Konflikt mit dem nachfolgenden Eintrag.");
         }
 
-        return (predecessorCheck && successorCheck)? Optional.empty() : Optional.of("Ungültiger Wert.");
+        return (predecessorCheck && successorCheck)? Optional.empty() : Optional.of("Ungültiger Wert. Konflikt mit dem vorherigen oder nachfolgenden Eintrag.");
     }
 
     /**
