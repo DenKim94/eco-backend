@@ -254,7 +254,7 @@ public class TrackingService {
             return successorCheck ? Optional.empty() : Optional.of("Ungültiger Wert. Konflikt mit dem nachfolgenden Eintrag.");
         }
 
-        return (predecessorCheck && successorCheck)? Optional.empty() : Optional.of("Ungültiger Wert. Konflikt mit dem vorherigen oder nachfolgenden Eintrag.");
+        return (predecessorCheck && successorCheck)? Optional.empty() : Optional.of("Ungültiger Wert. Konflikt mit vorherigem oder nachfolgendem Eintrag.");
     }
 
     /**
