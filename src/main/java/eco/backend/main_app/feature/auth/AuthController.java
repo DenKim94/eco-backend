@@ -171,13 +171,14 @@ public class AuthController {
 
     /**
      * POST /api/auth/user/update-name
-     * TFA-Code prüfen und Name des Users aktualisieren
+     * TFA-Code prüfen und Benutzername aktualisieren
      */
     @PostMapping("/user/update-name")
-    public ResponseEntity<Map<String, String>> updateUserName(@RequestBody UpdateUserNameRequest dto) {
+    public ResponseEntity<Map<String, String>> updateUserName(@AuthenticationPrincipal UserDetails userDetails,
+                                                              @RequestBody UpdateUserNameRequest dto) {
 
-        authService.updateUserName(dto);
-        return ResponseEntity.ok(Map.of("message", "Name wurde erfolgreich aktualisiert."));
+        authService.updateUserName(userDetails.getUsername(), dto);
+        return ResponseEntity.ok(Map.of("message", "Benutzername wurde erfolgreich aktualisiert."));
     }
 
     @GetMapping("/user/get-info")

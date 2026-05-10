@@ -222,10 +222,10 @@ public class AuthService {
         logger.debug("Passwort wurde aktualisiert.");
     }
 
-    public void updateUserName(UpdateUserNameRequest dto){
+    public void updateUserName(String currentUserName, UpdateUserNameRequest dto){
         logger.debug("Aktualisiere Username ...");
 
-        UserEntity user = userRepository.findByEmail(dto.email())
+        UserEntity user = userRepository.findByUsername(currentUserName)
                 .orElseThrow(() -> new GenericException("Account nicht gefunden.", HttpStatus.NOT_FOUND));
 
         if (!userService.isAdmin(user.getId()) && !user.getIsEnabled()) {
