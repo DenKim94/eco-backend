@@ -12,7 +12,7 @@ public class AppConstants {
             
             Dein Verifizierungscode lautet: %s
             
-            Bitte gib diesen Code in der App ein, um deine E-Mail zu bestätigen.
+            Bitte gib diesen Code in der App ein, um die gewünschte Aktion zu bestätigen.
             
             
             Viele Grüße.

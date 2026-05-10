@@ -143,10 +143,6 @@ public class AuthService {
         UserEntity user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new GenericException("Account nicht gefunden.", HttpStatus.NOT_FOUND));
 
-        if (user.getIsValidatedEmail() ) {
-            throw new GenericException("E-Mail ist bereits bestätigt.", HttpStatus.CONFLICT);
-        }
-
         if(!user.getIsEnabled()){ throw new GenericException("Account ist deaktiviert.", HttpStatus.FORBIDDEN); }
 
         // Neuen Code generieren und speichern
