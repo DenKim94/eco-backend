@@ -37,7 +37,7 @@ public class ConfigEntity {
     private Integer dueDay = 5;             // Abrechnungstag im Monat (z.B. 5: Zum 5. des Monats)
 
     @Column(name = "sepa_processing_days", nullable = false)
-    private Integer sepaProcessingDays = 15; // Anzahl der Tage für die Lastschriftankündigung (SEPA)
+    private Integer sepaProcessingDays = 10; // Anzahl der Tage für die Lastschriftankündigung (SEPA)
 
     @Column(name = "meter_identifier", nullable = false)
     private String meterIdentifier = "EMPTY-METER-ID"; // Zählernummer

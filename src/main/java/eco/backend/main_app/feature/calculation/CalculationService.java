@@ -246,8 +246,9 @@ public class CalculationService {
     }
 
     /**
-     * Hilfsfunktion berechnet die voraussichtliche Anzahl der übersprungenen Abrechnungsmonate
-     * anhand der übergebenen Parameter
+     * Hilfsfunktion berechnet die voraussichtliche Anzahl der verschobenen Abrechnungsmonate
+     * anhand der übergebenen Parameter.
+     * Diese Abrechnungsmonate werden nicht einfach übersprungen, sondern zum späteren Zeitpunkt verschoben.
      *
      * @param startDate Startdatum des Abrechnungszeitraums
      * @param dueDay Abbuchungstag im Monat
@@ -263,10 +264,8 @@ public class CalculationService {
         // Basis-Startpunkt finden
         LocalDate currentDue = startDate.withDayOfMonth(dueDay);
 
-        // Wenn der Stichtag im Startmonat schon vorbei ist (z.B. Start 22.07., Due 05.),
+        // Wenn der Stichtag im Startmonat schon vorbei ist (z.B. Start: 22.07., dueDay: 05.),
         // muss es logisch eh erst im nächsten Monat weitergehen.
-        // Das zählt technisch oft noch nicht als "ausgesetzt", sondern einfach als "Kalender-Logik".
-        // Wenn du das aber als "Skipped" zählen willst, mach hier value++
         if (currentDue.isBefore(startDate)) {
             currentDue = currentDue.plusMonths(1);
         }
