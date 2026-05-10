@@ -2,10 +2,7 @@ package eco.backend.main_app.feature.auth;
 
 import eco.backend.main_app.core.exception.GenericException;
 import eco.backend.main_app.feature.auth.admin.dto.UpdatePasswordRequest;
-import eco.backend.main_app.feature.auth.dto.LoginRequest;
-import eco.backend.main_app.feature.auth.dto.RegisterRequest;
-import eco.backend.main_app.feature.auth.dto.ResetPasswordRequest;
-import eco.backend.main_app.feature.auth.dto.VerificationRequest;
+import eco.backend.main_app.feature.auth.dto.*;
 import eco.backend.main_app.utils.AppConstants;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
@@ -223,6 +220,30 @@ public class AuthService {
 
         userRepository.save(user);
         logger.debug("Passwort wurde aktualisiert.");
+    }
+
+    public void updateUserName(UpdateUserNameRequest dto){
+        logger.debug("Aktualisiere Username ...");
+
+        UserEntity user = userRepository.findByEmail(dto.email())
+                .orElseThrow(() -> new GenericException("Account nicht gefunden.", HttpStatus.NOT_FOUND));
+
+        if (!userService.isAdmin(user.getId()) && !user.getIsEnabled()) {
+            throw new GenericException("Ungültiger Accountstatus.", HttpStatus.FORBIDDEN);
+        }
+
+        // Code Vergleich
+        if (isInvalidTfaCode(user, dto.tfaCode())) {
+            throw new GenericException("Ungültiger Code.", HttpStatus.BAD_REQUEST);
+        }
+
+        // Code aus Sicherheitsgründen nach Bestätigung neu generieren
+        user.setTfaCode(generateRandomCode());
+
+        user.setUsername(dto.newUserName());
+
+        userRepository.save(user);
+        logger.debug("Username wurde aktualisiert.");
     }
 
     private boolean isInvalidTfaCode(UserEntity user, String tfaCode){
