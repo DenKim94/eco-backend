@@ -177,7 +177,7 @@ public class TrackingService {
         // CHECK: Wert darf nicht null oder negativ sein
         if (dto.value_kWh() == null || dto.value_kWh() < 0) {
             logger.error("Ungültiger Wert.");
-            return Optional.of("Ungültiger Wert.");
+            return Optional.of("Ungültiger Wert. Bitte Eingabe überprüfen.");
         }
 
         TrackingEntity lastEntry = getNewestEntry(username);
@@ -191,7 +191,7 @@ public class TrackingService {
         // CHECK: Aktueller Eintrag darf nicht ÄLTER sein als der letzte Eintrag
         if (currentTimestamp.toLocalDate().isBefore(lastEntry.getTimestamp().toLocalDate())) {
             logger.error("Ungültiges Datum.");
-            return Optional.of("Ungültiges Datum.");
+            return Optional.of("Ungültiges Datum. Bitte Eingabe überprüfen.");
         }
 
         // CHECK: Es darf noch kein Eintrag am selben Tag existieren (ignoriert Uhrzeit)
