@@ -290,6 +290,7 @@ public class CalculationService {
     private record SkippedMonthsResults(int value, String message) {}
 
     /** Hilfsfunktion löscht alle Berechnungsergebnisse des Users */
+    @Transactional
     public void deleteAllEntries(String username) {
         UserEntity user = userService.findUserByName(username);
         calculationRepository.deleteByUserId(user.getId());
