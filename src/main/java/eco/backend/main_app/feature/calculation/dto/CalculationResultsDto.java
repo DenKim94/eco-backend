@@ -3,13 +3,13 @@ package eco.backend.main_app.feature.calculation.dto;
 import java.time.LocalDate;
 
 public record CalculationResultsDto(
-        String meterId,                 // Zähler-ID
-        LocalDate startDate,            // Startdatum der Abrechnungszeit
-        LocalDate endDate,              // Enddatum der Abrechnungszeit
-        long daysBetween,               // Anzahl der Tage in der Abrechnungszeit
+        String id,                      // Zähler-ID
+        LocalDate periodStart,          // Startdatum der Abrechnungszeit
+        LocalDate periodEnd,            // Enddatum der Abrechnungszeit
+        long daysPeriod,                // Anzahl der Tage in der Abrechnungszeit
         double paidAmountPeriod,        // Summe der Einzahlungen über den Abrechnungszeitraum [€]
-        double bruttoTotalCostPeriod,   // Gesamtkosten (brutto) anhand der verbrauchten Energiemenge [€]
-        double totalConsumptionKwh,     // Summe der bisher verbrauchte Energiemenge [kWh]
+        double totalCostsPeriod,        // Gesamtkosten (brutto) anhand der verbrauchten Energiemenge [€]
+        double sumUsedEnergy,           // Summe der bisher verbrauchte Energiemenge [kWh]
         double costDiffPeriod,          // Brutto Restbetrag [€]: Positiv = Guthaben, Negativ = Nachzahlung
         double usedEnergyPerDay,        // Durchschnittlicher Energieverbrauch pro Tag [kWh/Tag]
         String logMessage

@@ -23,6 +23,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -114,7 +115,8 @@ public class CalculationService {
         logger.debug("Berechnung für {} period(s) durchgeführt.", results.size());
         logger.debug("Anzahl der Datenpunkte: {}", trackedData.size());
 
-        // Rückgabe der Liste
+        // Rückgabe der sortierten Liste
+        results.sort(Comparator.comparing(CalculationResultsDto::periodEnd));
         return results;
     }
 
@@ -202,8 +204,8 @@ public class CalculationService {
         // Iteration über alle Ergebnisse in der Liste
         for (CalculationResultsDto results : resultsList) {
 
-            LocalDateTime startTimestamp = results.startDate().atStartOfDay();
-            LocalDateTime endTimestamp = results.endDate().atStartOfDay();
+            LocalDateTime startTimestamp = results.periodStart().atStartOfDay();
+            LocalDateTime endTimestamp = results.periodEnd().atStartOfDay();
 
             // Prüfen: Gibt es schon einen Eintrag für dieses Enddatum?
             // Verhindert Duplikate bei mehrfacher Berechnung am selben Tag.
@@ -219,16 +221,16 @@ public class CalculationService {
 
             // Diese Werte werden IMMER aktualisiert (unverändert)
             entityToSave.setPeriodStart(startTimestamp);
-            entityToSave.setTotalCostsPeriod(results.bruttoTotalCostPeriod());
+            entityToSave.setTotalCostsPeriod(results.totalCostsPeriod());
             entityToSave.setCostDiffPeriod(results.costDiffPeriod());
-            entityToSave.setDaysPeriod(results.daysBetween());
-            entityToSave.setSumUsedEnergy(results.totalConsumptionKwh());
+            entityToSave.setDaysPeriod(results.daysPeriod());
+            entityToSave.setSumUsedEnergy(results.sumUsedEnergy());
             entityToSave.setPaidAmountPeriod(results.paidAmountPeriod());
             entityToSave.setUsedEnergyPerDay(results.usedEnergyPerDay());
 
             calculationRepository.save(entityToSave);
 
-            logger.debug("Speichern der Berechnungsergebnisse von {} bis {}.", results.startDate(), results.endDate());
+            logger.debug("Speichern der Berechnungsergebnisse von {} bis {}.", results.periodStart(), results.periodEnd());
         }
 
         logger.debug("Alle Berechnungsergebnisse gespeichert.");
