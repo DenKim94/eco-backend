@@ -80,7 +80,7 @@ public class AuthService {
             eventPublisher.publishEvent(new UserRegisteredEvent(this, registeredUser));
 
             // 6. E-Mail senden
-            emailService.sendVerificationEmail(dto.username(), dto.email(), tfaCode, AppConstants.TEXT_VERIFY_EMAIL);
+            emailService.sendVerificationEmail(dto.username(), dto.email(), tfaCode, AppConstants.TEXT_VERIFY_ACTION);
 
             logger.debug("Account wurde erfolgreich registriert.");
         }
@@ -151,7 +151,7 @@ public class AuthService {
         userRepository.save(user);
 
         // Mail senden
-        emailService.sendVerificationEmail(user.getUsername(), user.getEmail(), newCode, AppConstants.TEXT_VERIFY_EMAIL);
+        emailService.sendVerificationEmail(user.getUsername(), user.getEmail(), newCode, AppConstants.TEXT_VERIFY_ACTION);
     }
 
     /**
