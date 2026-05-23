@@ -13,6 +13,7 @@ public class AppConstants {
             Dein Verifizierungscode lautet: %s
             
             Bitte gib diesen Code in der App ein, um die gewünschte Aktion auszuführen.
+            Bei Fragen wende dich bitte an den Admin.
             
             ___
             
@@ -25,6 +26,33 @@ public class AppConstants {
             Dein Verifizierungscode lautet: %s
             
             Bitte gib diesen Code in der App ein, um dein Passwort zurücksetzen zu können.
+            Bei Fragen wende dich bitte an den Admin.
+            
+            ___
+            
+            Freundliche Grüße.
+            """;
+
+    public static final String TEXT_USER_REMOVED_BY_ADMIN = """
+            Hallo %s!
+            
+            Dein Profil wurde durch den Admin entfernt.
+            Deine hinterlegten Daten wurden ebenfalls vollständig gelöscht.
+            
+            Bei Fragen wende dich bitte an den Admin.
+            
+            ___
+            
+            Freundliche Grüße.
+            """;
+
+    public static final String TEXT_USER_STATUS_CHANGED_BY_ADMIN = """
+            Hallo %s!
+            
+            Dein Profil wurde durch den Admin temporär %s.
+            Daher ist die Nutzung der App für dich aktuell nicht möglich.
+            
+            Bei Fragen wende dich bitte an den Admin.
             
             ___
             

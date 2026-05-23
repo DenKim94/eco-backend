@@ -17,10 +17,12 @@ import java.util.List;
 @Service
 public class UserService implements UserDetailsService {
     private final UserRepository userRepository;
+    private final EmailService emailService;
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, EmailService emailService) {
         this.userRepository = userRepository;
+        this.emailService = emailService;
     }
 
     // Diese Methode wird von Spring Security aufgerufen beim Login
@@ -43,6 +45,7 @@ public class UserService implements UserDetailsService {
 
     @Transactional
     public void deleteUserById(Long userId) {
+        UserEntity user = findUserById(userId);
 
         if (isAdmin(userId)) {
             throw new GenericException("Admin-Account kann nicht entfernt werden.", HttpStatus.FORBIDDEN);
@@ -50,6 +53,10 @@ public class UserService implements UserDetailsService {
 
         if (!userRepository.existsById(userId)) {
             throw new GenericException("Account nicht gefunden.", HttpStatus.NOT_FOUND);
+        }
+
+        if (user.getIsValidatedEmail()){
+            emailService.sendUserRemovedEmail(user.getUsername(), user.getEmail());
         }
         userRepository.deleteById(userId);
     }
@@ -60,6 +67,10 @@ public class UserService implements UserDetailsService {
 
         if (isAdmin(userId) && !enabled) {
             throw new GenericException("Admin-Account kann nicht deaktiviert werden.", HttpStatus.FORBIDDEN);
+        }
+
+        if (user.getIsValidatedEmail()){
+            emailService.sendUserStatusEmail(user.getUsername(), user.getEmail(), enabled);
         }
 
         user.setEnabled(enabled);
