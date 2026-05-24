@@ -4,7 +4,9 @@ import eco.backend.main_app.feature.auth.AuthService;
 import eco.backend.main_app.feature.auth.UserService;
 import eco.backend.main_app.feature.auth.admin.dto.ListUserRequest;
 import eco.backend.main_app.feature.auth.admin.dto.UpdatePasswordRequest;
+import eco.backend.main_app.feature.auth.admin.dto.UserStatusRequest;
 import eco.backend.main_app.feature.auth.model.UserEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -38,10 +40,15 @@ public class AdminController {
 
     // User sperren/entsperren
     @PatchMapping("/users/{id}/set-status")
-    public ResponseEntity<?> setUserStatus(@PathVariable Long id, @RequestParam boolean isEnabled) {
+    public ResponseEntity<?> setUserStatus(@PathVariable Long id, @RequestBody UserStatusRequest dto) {
+        boolean isEnabled = dto.isEnabled();
         UserEntity user = userService.findUserById(id);
         if(!user.getIsEnabled() && !isEnabled){
-            return ResponseEntity.ok(Map.of("message", "Profil von " + user.getUsername() + " ist bereits deaktiviert."));
+            return ResponseEntity
+                    .status(HttpStatus.CONFLICT)
+                    .body(Map.of(
+                            "message", "Profil von " + user.getUsername() + " ist bereits deaktiviert."
+                    ));
         }
         userService.setUserEnabled(id, isEnabled);
         String status = isEnabled ? "aktiviert" : "deaktiviert";

@@ -49,7 +49,7 @@ public class AppConstants {
     public static final String TEXT_USER_STATUS_CHANGED_BY_ADMIN = """
             Hallo %s!
             
-            Dein Profil wurde durch den Admin temporär %s.
+            Dein Profil wurde durch den Admin %s.
             Daher ist die Nutzung der App für dich aktuell nicht möglich.
             
             Bei Fragen wende dich bitte an den Admin.

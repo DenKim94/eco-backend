@@ -64,7 +64,7 @@ public class EmailService {
             logger.debug("E-Mail an {} wurde erfolgreich gesendet.", toEmail);
 
         } catch (Exception e) {
-            logger.error("Fehler beim Senden der -Mail an {}: {}", toEmail, e.getMessage());
+            logger.error("Fehler beim Senden der E-Mail an {}: {}", toEmail, e.getMessage());
         }
     }
 

@@ -96,7 +96,7 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(allowedOrigins);
 
         // Erlaubte HTTP-Methoden (OPTIONS ist zwingend erforderlich für Preflight-Requests)
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
 
         // Erlaubte Header (Authorization für das JWT, Content-Type für JSON-Bodys)
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
