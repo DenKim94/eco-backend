@@ -59,7 +59,7 @@ public class CalculationService {
      * @return DTO als Liste mit Berechnungsergebnissen
      */
      public List<CalculationResultsDto> runCalculation(String username, CalculationRequestDto requestDto) {
-        logger.debug("Starting cost calculation... ");
+        logger.debug("Starte Berechnung ...");
 
         int MIN_DATA_POINTS = 2; // Mindestanzahl der Datenpunkte für die Berechnung
         UserEntity user = userService.findUserByName(username);
@@ -230,7 +230,6 @@ public class CalculationService {
 
             calculationRepository.save(entityToSave);
 
-            logger.debug("Speichern der Berechnungsergebnisse von {} bis {}.", results.periodStart(), results.periodEnd());
         }
 
         logger.debug("Alle Berechnungsergebnisse gespeichert.");

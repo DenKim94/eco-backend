@@ -97,7 +97,7 @@ public class AuthService {
     @Transactional
     public UserEntity authenticateUser(LoginRequest request) {
 
-        logger.debug("Authentifizierung des Users...");
+        logger.debug("Authentifizierung des Users {} ...", request.username());
 
         // AuthenticationManager prüft Username & Passwort gegen die DB
         Authentication auth = authenticationManager.authenticate(
